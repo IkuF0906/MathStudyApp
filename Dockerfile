@@ -1,6 +1,10 @@
 # アプリ（FastAPI）のイメージ。画面（static/）は nginx が配信するが、単体でも動くように含めておく
 FROM python:3.12-slim
 
+# 信頼できなくなったルート証明書を外す（理由はスクリプトに書いた）
+COPY deploy/distrust-roots.sh /tmp/
+RUN sh /tmp/distrust-roots.sh && rm /tmp/distrust-roots.sh
+
 # イメージを作ったコミット。/api/version で返す（GitHub Actions が渡す）
 ARG APP_VERSION=dev
 ENV PYTHONDONTWRITEBYTECODE=1 \
