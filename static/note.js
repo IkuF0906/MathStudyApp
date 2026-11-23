@@ -204,6 +204,8 @@ function addMemoLine(after = null, latex = "") {
   mf.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
+      // 日本語入力の変換を確定する Enter では行を足さない
+      if (e.isComposing || e.keyCode === 229) return;
       addMemoLine(row).focus();
     } else if (e.key === "Backspace" && !mf.value && $("memo-lines").children.length > 1) {
       // 空の行で Backspace を押したら行を消して前の行へ

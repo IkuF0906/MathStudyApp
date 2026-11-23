@@ -828,6 +828,8 @@ window.addEventListener("DOMContentLoaded", async () => {
     $(id).addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
+        // 日本語入力の変換を確定する Enter では送らない（Safari は isComposing が先に false になるので 229 も見る）
+        if (e.isComposing || e.keyCode === 229) return;
         submit();
       }
     });

@@ -1,4 +1,6 @@
 :root {
+  /* スクロールバー・入力欄などブラウザが描く部品も、ダークモードで暗くする */
+  color-scheme: light dark;
   --bg: #f5f4ef;
   --surface: #ffffff;
   --surface-2: #faf9f6; /* 解答欄のまわりなど、一段下がった面 */
