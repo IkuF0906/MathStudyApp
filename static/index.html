@@ -6,7 +6,7 @@
   <!-- 明るい・暗いの両方に対応していることを、描き始める前にブラウザへ伝える -->
   <meta name="color-scheme" content="light dark">
   <title>学力診断テスト</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%238ccdd9%22/%3E%3Ctext x=%2216%22 y=%2223%22 font-size=%2218%22 text-anchor=%22middle%22 fill=%22%232a3138%22 font-family=%22serif%22 font-style=%22italic%22%3Ef%E2%80%B2%3C/text%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%238ccdd9%22/%3E%3Cpath d=%22M6 26v-6h6.5v-6.5H19V7h7v19Z%22 fill=%22%232a3138%22/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500&display=swap">
@@ -24,13 +24,13 @@
   <header class="topbar">
     <div class="topbar-inner">
       <div class="brand">
-        <button type="button" class="menu-button" id="menu-open" aria-controls="menu" aria-expanded="false">
+        <button type="button" class="menu-button" id="menu-open" aria-controls="menu" aria-expanded="false" aria-label="メニュー">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg>
-          <span id="menu-label">メニュー</span>
+          <span id="menu-label" hidden></span>
           <span class="menu-dot" id="menu-dot" hidden></span>
         </button>
         <button type="button" class="home" id="home" title="トップへ">
-          <span class="logo" aria-hidden="true">f′</span>
+          <span class="logo" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M6 26v-6h6.5v-6.5H19V7h7v19Z"/></svg></span>
           <h1>学力診断テスト</h1>
         </button>
       </div>
@@ -87,7 +87,7 @@
           </button>
         </li>
       </ul>
-      <p class="hint home-drill">数学は、単元ごとの練習・復習もできます（左上の「メニュー」から）。</p>
+      <p class="hint home-drill">数学は、単元ごとの練習・復習もできます（左上の三本線のボタンから）。</p>
     </section>
 
     <section id="drill">

@@ -521,7 +521,10 @@ function switchTab(tab) {
     if (b.dataset.tab === tab) b.setAttribute("aria-current", "page");
     else b.removeAttribute("aria-current");
   });
-  $("menu-label").textContent = DRILL_PAGES[tab] ? `ドリル：${DRILL_PAGES[tab]}` : "メニュー";
+  // ドリルのページでは、どのページを開いているかをボタンに出す（ほかのページでは三本線だけ）
+  $("menu-label").textContent = DRILL_PAGES[tab] ? `ドリル：${DRILL_PAGES[tab]}` : "";
+  $("menu-label").hidden = !DRILL_PAGES[tab];
+  $("menu-open").setAttribute("aria-label", DRILL_PAGES[tab] ? `メニュー（ドリル：${DRILL_PAGES[tab]}）` : "メニュー");
   $("menu-open").classList.toggle("active", tab in DRILL_PAGES);
   // ページの URL に #practice などを付け、再読み込みやブックマークで同じページを開けるようにする
   history.replaceState(null, "", tab === "home" ? location.pathname : `#${tab}`);

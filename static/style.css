@@ -141,6 +141,8 @@ select, input[type="text"] {
 .home { display: flex; align-items: center; gap: 10px; border: none; background: none; padding: 0; color: inherit; }
 .menu-button { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px; color: var(--muted); font-size: 0.9rem; white-space: nowrap; }
 .menu-button svg, .nav-item svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+/* 文字のないときは三本線だけの正方形のボタンにする */
+.menu-button:not(.active) { width: 40px; padding: 0; justify-content: center; }
 .menu-button.active { color: var(--text); border-color: var(--accent); background: var(--accent-tint); font-weight: 500; }
 /* 期限が来た復習があるときの印（メニューの中の「復習」に数を出す） */
 .menu-dot { position: absolute; top: 5px; right: 5px; width: 8px; height: 8px; border-radius: 999px; background: var(--accent); box-shadow: 0 0 0 2px var(--surface); }
@@ -177,8 +179,9 @@ dialog.drawer[open] { animation: drawer-in 0.18s ease-out; }
   display: flex;
   align-items: center;
   justify-content: center;
-  font: italic 20px "Times New Roman", serif;
 }
+/* 到達レベルを1段ずつ上がる階段の印 */
+.logo svg { width: 72%; height: 72%; fill: currentColor; }
 h1 { font-size: 1.25rem; margin: 0; letter-spacing: 0.02em; }
 
 .tabs { display: flex; gap: 4px; background: var(--key-edit); padding: 4px; border-radius: 12px; }
@@ -642,8 +645,9 @@ code { font-family: ui-monospace, Consolas, monospace; background: var(--bg); pa
   /* タブが5つあるので、アプリ名の下の行に全幅で並べる */
   .topbar-inner { padding: 10px 12px; gap: 8px; }
   .menu-button { height: 36px; padding: 0 10px; }
+  .menu-button:not(.active) { width: 36px; padding: 0; }
   .tabs { flex: 1 1 100%; }
-  .logo { width: 30px; height: 30px; font-size: 17px; border-radius: 8px; }
+  .logo { width: 30px; height: 30px; border-radius: 8px; }
   h1 { font-size: 1.05rem; white-space: nowrap; }
   .tabs { padding: 3px; gap: 2px; }
   .tab { flex: 1; justify-content: center; padding: 6px 4px; font-size: 0.85rem; gap: 4px; white-space: nowrap; }
