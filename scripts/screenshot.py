@@ -62,7 +62,10 @@ def take_mobile_screenshots(browser, out: Path, url: str, problems: list[str]) -
     ctx = browser.new_context(viewport={"width": 390, "height": 844}, device_scale_factor=2, is_mobile=True, has_touch=True)
     page = ctx.new_page()
     page.on("pageerror", lambda e: problems.append(f"スマホ JS エラー: {e}"))
-    page.goto(url + "#practice")
+    page.goto(url)
+    page.wait_for_selector("#home-page:not([hidden])")
+    page.screenshot(path=out / "11_mobile_home.png", full_page=True)
+    open_page(page, "practice", tap=True)
     page.select_option("#type-select", "power")
     page.wait_for_selector("#problem .katex", timeout=15000)
     page.wait_for_timeout(800)
@@ -112,7 +115,20 @@ def take_screenshots(out: Path, url: str) -> None:
         page.on("console", lambda m: m.type == "error" and problems.append(f"console: {m.text}"))
         page.on("response", lambda r: r.status >= 400 and problems.append(f"{r.status} {r.url}"))
 
-        page.goto(url + "#practice")
+        # トップ（3つの診断の入口）と、漢字・英語のページ
+        page.goto(url)
+        page.wait_for_selector("#home-page:not([hidden])")
+        page.wait_for_timeout(300)
+        page.screenshot(path=out / "0_home.png", full_page=True)
+        page.click('[data-go="english"]')
+        page.wait_for_selector("#vocab-begin")
+        page.screenshot(path=out / "0_english.png")
+        page.click('.tab[data-tab="kanji"]')
+        page.click("#vocab-begin")
+        page.wait_for_selector(".vocab-opt")
+        page.screenshot(path=out / "0_kanji_question.png")
+
+        open_page(page, "practice")  # URL の # だけを変えても読み込み直さないので、メニューから開く
         page.select_option("#type-select", "power")
         page.wait_for_selector("#problem .katex", timeout=15000)
         page.wait_for_timeout(500)
@@ -197,6 +213,22 @@ def take_screenshots(out: Path, url: str) -> None:
         page.screenshot(path=out / "10_sequence_result.png", full_page=True)
         if text_input_on(page):
             page.click("#toggle-input")
+
+        # 方程式：入力キーに「,」と「±」が出て、数式エディタで書いた ± やコンマの答えを正解と判定できる
+        for type_id, name in [("eq_quadratic_formula", "11_equation_pm"), ("eq_quadratic_factor", "11_equation_list")]:
+            page.click('#unit-chips [data-unit="equation"]')
+            page.wait_for_function("() => current.unit_id === 'equation'")
+            before = page.evaluate("current.problem_id")
+            page.select_option("#type-select", type_id)
+            page.wait_for_function("([id, t]) => current.problem_id !== id && current.type_id === t", arg=[before, type_id])
+            latex = from_id(page.evaluate("current.problem_id")).answer_latex.replace(r"\ ", " ")
+            page.evaluate("l => document.getElementById('answer-math').setValue(l)", latex)
+            page.click("#submit")
+            page.wait_for_selector("#result:not([hidden])")
+            page.wait_for_timeout(300)
+            if not page.inner_text("#verdict").startswith("正解"):
+                problems.append(f"{type_id}: 数式エディタの答え {latex} が正解になりません")
+            page.screenshot(path=out / f"{name}.png", full_page=True)
 
         # 不定積分で C を付けずに正解したときの注意
         page.click('#unit-chips [data-unit="integral"]')

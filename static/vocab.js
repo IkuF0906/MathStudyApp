@@ -1,4 +1,4 @@
-// 語彙力チェック（日本語・English）。単語の意味を選ぶ20問の適応型テストで語彙数を推定する。
+// 語彙のチェック（漢字＝日本語・英語）。単語の意味を選ぶ20問の適応型テストで語彙数を推定する。
 // サーバーは使わず、このファイルだけで動く。推定の考え方はレベル診断（drill/placement.py）と同じで、
 // 4択なので当てずっぽうで正解する確率（1/4）を考えに入れる。
 (() => {
@@ -79,10 +79,13 @@
   const pk = (th, L) => 1 / (1 + Math.exp(-1.6 * (th - L)));
   const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  let lang = "ja";
+  let lang = null; // 最初にページを開いたときに決まる
   let used, ans, cur, theta;
   let busy = false;
-  let ready = false; // 最初にタブを開いたときに画面を作る
+  // 言語ごとの途中の状態（ページを行き来しても、解いている途中のテストを残す）
+  const saved = {};
+  const TITLES = { ja: "漢字の語彙チェック", en: "英単語チェック" };
+  const PAGES = { ja: "kanji", en: "english" };
 
   // θ の推定（事後分布の最頻値）。「わからない」は、知らない語でほぼ押されるとみなす
   function estimate() {
@@ -139,12 +142,17 @@
     show();
   }
 
-  function show() {
+  // again に問題を渡すと、その問題をもう一度出す（ページを行き来したとき）
+  function show(again) {
     const d = T[lang];
     busy = false;
-    const q = nextQ();
-    used.add(q[0]);
-    const opts = options(q);
+    let q, opts;
+    if (again) ({ q, opts } = again);
+    else {
+      q = nextQ();
+      used.add(q[0]);
+      opts = options(q);
+    }
     cur = { q, opts };
     $("vocab-card").innerHTML = `<div class="vocab-prog"><span>${ans.length + 1} / ${N} 問目</span><span>${d.name}</span></div>
       <div class="bar"><span style="width:${(ans.length / N) * 100}%"></span></div>
@@ -160,6 +168,7 @@
     if (busy) return;
     busy = true;
     const { q, opts } = cur;
+    cur = null; // 答えた問題（ページを行き来したときに、もう一度出さない）
     const r = o === null ? "idk" : o === q[1] ? "ok" : "ng";
     ans.push({ q, r });
     theta = estimate();
@@ -169,7 +178,11 @@
     });
     $("vocab-idk").disabled = true;
     if (btn && r === "ng") btn.classList.add("ng");
-    setTimeout(() => (ans.length < N ? show() : result()), r === "ok" ? 350 : 900);
+    const l = lang;
+    setTimeout(() => {
+      if (lang !== l) return; // 待っている間に別の言語のページへ移った
+      ans.length < N ? show() : result();
+    }, r === "ok" ? 350 : 900);
   }
 
   function result() {
@@ -199,31 +212,33 @@
       <p class="hint">棒の長さは、そのレベルの語を知っていると推定される割合です。右の数字は実際の正答数です。当てずっぽうで正解する確率（4分の1）を考慮して推定しています。</p>
       ${miss.length ? `<h3>覚えておきたい語</h3><ul class="vocab-review">${miss.map((x) => `<li><b lang="${lang}">${esc(x.q[0])}</b><span>${esc(x.q[1])}</span><i>Lv${x.q[2]}</i></li>`).join("")}</ul>` : ""}
       <div class="placement-actions"><button type="button" class="primary" id="vocab-again">もう一度</button>
-      <button type="button" id="vocab-other">${T[other].name}版へ</button></div>`;
+      <button type="button" id="vocab-other">${TITLES[other]}へ</button></div>`;
     $("vocab-again").addEventListener("click", begin);
-    $("vocab-other").addEventListener("click", () => setLang(other));
+    $("vocab-other").addEventListener("click", () => switchTab(PAGES[other]));
     window.scrollTo({ top: 0, behavior: reduceMotion() ? "auto" : "smooth" });
   }
 
-  function setLang(l) {
+  // 漢字・英語のページを開いたとき（app.js の switchTab から呼ぶ）。途中のテストはそのまま残す
+  window.showVocab = (l) => {
+    if (l === lang) return;
+    if (lang) saved[lang] = { used, ans, cur, theta };
     lang = l;
-    document.querySelectorAll(".vocab-lang").forEach((b) => {
-      b.classList.toggle("active", b.dataset.lang === l);
-      b.setAttribute("aria-pressed", String(b.dataset.lang === l));
-    });
-    intro();
-  }
-
-  // 「語彙」タブを開いたとき（app.js の switchTab から呼ぶ）。途中のテストはそのまま残す
-  window.showVocab = () => {
-    if (ready) return;
-    ready = true;
+    $("vocab-title").textContent = TITLES[l];
     $("vocab-note").textContent = NOTE;
-    intro();
+    const st = saved[l];
+    if (!st) {
+      intro();
+      return;
+    }
+    ({ used, ans, cur, theta } = st);
+    // 画面を戻し、ボタンの動きを付け直す（途中の問題なら同じ問題から、結果なら結果を作り直す）
+    if (ans && ans.length >= N) result();
+    else if (cur) show(cur);
+    else if (ans) show(); // 答えた直後に移ったときは、次の問題から
+    else intro();
   };
 
   window.addEventListener("DOMContentLoaded", () => {
-    document.querySelectorAll(".vocab-lang").forEach((b) => b.addEventListener("click", () => setLang(b.dataset.lang)));
     // 1〜4 で選択肢、0 で「わからない」（語彙のタブを開いているときだけ）
     document.addEventListener("keydown", (e) => {
       if ($("vocab").hidden || e.target.closest?.("input, textarea, math-field")) return;

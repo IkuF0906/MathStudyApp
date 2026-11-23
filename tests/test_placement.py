@@ -7,6 +7,7 @@ import pytest
 
 from drill.placement import (
     LEVEL_NAMES,
+    START_LEVEL,
     TOTAL,
     Response,
     estimate,
@@ -34,8 +35,8 @@ def simulate(true_theta: float, seed: int) -> list[Response]:
 def test_every_type_has_a_level():
     for t in PROBLEM_TYPES.values():
         assert t.level in LEVEL_NAMES, t.id
-    # 第1段階では Lv6（数I・A）〜Lv9（数III）を埋める
-    assert {t.level for t in PROBLEM_TYPES.values()} >= {6, 7, 8, 9}
+    # Lv1（中1）〜Lv9（数III）を埋める（Lv10 の大学教養は上限として名前だけ持つ）
+    assert {t.level for t in PROBLEM_TYPES.values()} == set(range(1, 10))
 
 
 def test_p_correct():
@@ -61,13 +62,13 @@ def test_no_repeat_and_unit_variety():
 def test_next_item_follows_last_answer():
     rng = random.Random(1)
     first = next_type([], rng)
-    assert PROBLEM_TYPES[first].level == 7
-    up = next_type([Response(first, 7, True)] * 1, rng)
-    down = next_type([Response(first, 7, False)], rng)
-    assert PROBLEM_TYPES[up].level >= 7 >= PROBLEM_TYPES[down].level
+    assert PROBLEM_TYPES[first].level == START_LEVEL
+    up = next_type([Response(first, START_LEVEL, True)], rng)
+    down = next_type([Response(first, START_LEVEL, False)], rng)
+    assert PROBLEM_TYPES[up].level >= START_LEVEL >= PROBLEM_TYPES[down].level
 
 
-@pytest.mark.parametrize("true_theta", [6.0, 7.5, 9.0])
+@pytest.mark.parametrize("true_theta", [2.0, 4.0, 6.0, 7.5, 9.0])
 def test_simulated_examinee_is_recovered(true_theta):
     estimates = [estimate(simulate(true_theta, seed)) for seed in range(RUNS)]
     assert statistics.mean(estimates) == pytest.approx(true_theta, abs=0.3)
@@ -75,9 +76,9 @@ def test_simulated_examinee_is_recovered(true_theta):
 
 
 def test_different_abilities_are_separated():
-    low = [estimate(simulate(6.0, s)) for s in range(RUNS)]
-    mid = [estimate(simulate(7.5, s + 1000)) for s in range(RUNS)]
-    high = [estimate(simulate(9.0, s + 2000)) for s in range(RUNS)]
+    low = [estimate(simulate(3.0, s)) for s in range(RUNS)]
+    mid = [estimate(simulate(4.5, s + 1000)) for s in range(RUNS)]
+    high = [estimate(simulate(6.0, s + 2000)) for s in range(RUNS)]
     # 1.5 レベル違う受験者どうしは、ほとんどの組で推定の大小が入れ替わらない
     pairs = [(lo, hi) for a, b in [(low, mid), (mid, high)] for lo, hi in zip(a, b)]
     assert sum(lo < hi for lo, hi in pairs) / len(pairs) >= 0.9
@@ -109,4 +110,4 @@ def test_summary():
 def test_summary_labels():
     assert summarize(simulate(9.5, 0))["label"] in ("数III相当", "大学教養相当")
     strong_low = summarize([Response(t, PROBLEM_TYPES[t].level, False) for t in list(PROBLEM_TYPES)[:20]])
-    assert strong_low["label"] == "数I・A未満"
+    assert strong_low["label"] == "中学1年未満"

@@ -29,14 +29,15 @@
           <span id="menu-label">メニュー</span>
           <span class="menu-dot" id="menu-dot" hidden></span>
         </button>
-        <button type="button" class="home" id="home" title="トップ（数学レベル診断）へ">
+        <button type="button" class="home" id="home" title="トップへ">
           <span class="logo" aria-hidden="true">f′</span>
           <h1>学力診断テスト</h1>
         </button>
       </div>
       <nav class="tabs" aria-label="診断テスト">
-        <button class="tab active" data-tab="placement" aria-current="page">数学レベル診断</button>
-        <button class="tab" data-tab="vocab">語彙力チェック</button>
+        <button class="tab" data-tab="placement">数学</button>
+        <button class="tab" data-tab="kanji">漢字</button>
+        <button class="tab" data-tab="english">英語</button>
       </nav>
     </div>
   </header>
@@ -48,8 +49,10 @@
     </div>
     <nav aria-label="すべてのページ">
       <p class="drawer-group">診断テスト</p>
-      <button type="button" class="nav-item" data-tab="placement">数学レベル診断<small>20問で到達レベル（数I・A〜数III）を推定</small></button>
-      <button type="button" class="nav-item" data-tab="vocab">語彙力チェック<small>日本語・English の語彙数を推定</small></button>
+      <button type="button" class="nav-item" data-tab="home">トップ<small>3つの診断から選ぶ</small></button>
+      <button type="button" class="nav-item" data-tab="placement">数学レベル診断<small>20問で到達レベル（中学1年〜数III）を推定</small></button>
+      <button type="button" class="nav-item" data-tab="kanji">漢字の語彙チェック<small>漢検の級を目安に、知っている語の数を推定</small></button>
+      <button type="button" class="nav-item" data-tab="english">英単語チェック<small>英検の級を目安に、知っている語の数を推定</small></button>
       <p class="drawer-group">数学ドリル</p>
       <button type="button" class="nav-item" data-tab="practice">練習<small>単元と問題の型を選んで解く</small></button>
       <button type="button" class="nav-item" data-tab="review"><span class="nav-title">復習<span class="badge" id="due-badge" aria-hidden="true" hidden></span><span class="visually-hidden" id="due-badge-label"></span></span><small>期限が来た型・苦手な型を解く</small></button>
@@ -58,6 +61,35 @@
   </dialog>
 
   <main>
+    <section id="home-page" hidden aria-labelledby="home-title">
+      <h2 id="home-title">どの診断を受けますか</h2>
+      <p class="hint">どれも20問です。正解すると難しい問題、間違えると易しい問題が出て、いまの到達レベルを推定します。</p>
+      <ul class="test-list">
+        <li>
+          <button type="button" class="test-row" data-go="placement">
+            <span class="test-name">数学</span>
+            <span class="test-desc">中学1年〜数III のどこまで解けるか。間違えやすい所も分かります</span>
+            <span class="test-meta">記述式・約25分</span>
+          </button>
+        </li>
+        <li>
+          <button type="button" class="test-row" data-go="kanji">
+            <span class="test-name">漢字</span>
+            <span class="test-desc">漢字の語の意味をどれだけ知っているか。漢検10級〜1級が目安です</span>
+            <span class="test-meta">4択・約3分</span>
+          </button>
+        </li>
+        <li>
+          <button type="button" class="test-row" data-go="english">
+            <span class="test-name">英語</span>
+            <span class="test-desc">英単語の意味をどれだけ知っているか。中学〜英検1級が目安です</span>
+            <span class="test-meta">4択・約3分</span>
+          </button>
+        </li>
+      </ul>
+      <p class="hint home-drill">数学は、単元ごとの練習・復習もできます（左上の「メニュー」から）。</p>
+    </section>
+
     <section id="drill">
       <div class="toolbar" id="toolbar">
         <div class="chips" id="unit-chips" role="group" aria-label="単元"></div>
@@ -75,7 +107,7 @@
 
       <section class="pane placement-intro" id="placement-intro" hidden aria-labelledby="placement-title">
         <h2 id="placement-title">あなたの数学の到達レベルは？</h2>
-        <p>全20問の記述式テストで、到達レベル（数I・A 〜 数III）を推定します。正解すると難しい問題、間違えると易しい問題が出ます。</p>
+        <p>全20問の記述式テストで、到達レベル（中学1年 〜 数III）を推定します。最初は数I の問題から始まり、正解すると難しい問題、間違えると易しい問題が出ます。</p>
         <p class="hint">解けない問題は「わからない」を押して先へ進めます。結果では、レベルごとの正答と、よく出た間違いのパターンを確認できます。所要時間はおよそ20〜30分です。</p>
         <p class="error" id="placement-error" role="alert" hidden></p>
         <button type="button" id="placement-start" class="primary">診断をはじめる</button>
@@ -218,12 +250,8 @@
     <section id="vocab" hidden aria-labelledby="vocab-title">
       <div class="vocab-head">
         <div>
-          <h2 id="vocab-title">語彙力チェック</h2>
+          <h2 id="vocab-title">漢字の語彙チェック</h2>
           <p class="hint">単語の意味を4つの中から選んでください。全20問で、正解すると難しい語、間違えると易しい語が出ます。知らない語は「わからない」を押すと推定が正確になります。</p>
-        </div>
-        <div class="segmented" role="group" aria-label="言語">
-          <button type="button" class="vocab-lang active" data-lang="ja" aria-pressed="true">日本語</button>
-          <button type="button" class="vocab-lang" data-lang="en" aria-pressed="false">English</button>
         </div>
       </div>
       <div class="pane vocab-card" id="vocab-card" aria-live="polite"></div>

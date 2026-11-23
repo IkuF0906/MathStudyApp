@@ -86,8 +86,12 @@ async function loadUnits() {
 }
 
 function markSelectedUnit() {
-  for (const chip of $("unit-chips").children) {
-    chip.setAttribute("aria-pressed", String(chip.dataset.unit === selectedUnit));
+  const box = $("unit-chips");
+  for (const chip of box.children) {
+    const on = chip.dataset.unit === selectedUnit;
+    chip.setAttribute("aria-pressed", String(on));
+    // スマホでは単元が横にスクロールするので、選んでいる単元が見えるところまで送る（ページは動かさない）
+    if (on && box.scrollWidth > box.clientWidth) box.scrollLeft = chip.offsetLeft - box.offsetLeft - 16;
   }
 }
 
@@ -157,6 +161,7 @@ function showProblem(problem) {
   setLatex($("problem"), current.latex);
   $("problem").hidden = !current.latex; // 文章題で式がないときは問題文だけを出す
   setVariable(current.variable);
+  setListKeys(Boolean(current.list_answers));
   setLatex($("answer-prefix"), current.answer_prefix);
   $("answer-math").value = "";
   $("answer-text").value = "";
@@ -504,7 +509,9 @@ async function practiceType(unit, type) {
   switchTab("practice");
 }
 
-const TABS = ["placement", "vocab", "practice", "review", "stats"];
+const TABS = ["home", "placement", "kanji", "english", "practice", "review", "stats"];
+// 語彙のチェックのページと、その言語
+const VOCAB_TABS = { kanji: "ja", english: "en" };
 // サイドメニューから開くページ（数学ドリル）。開いている間はメニューのボタンにページ名を出す
 const DRILL_PAGES = { practice: "練習", review: "復習", stats: "成績" };
 
@@ -517,17 +524,19 @@ function switchTab(tab) {
   $("menu-label").textContent = DRILL_PAGES[tab] ? `ドリル：${DRILL_PAGES[tab]}` : "メニュー";
   $("menu-open").classList.toggle("active", tab in DRILL_PAGES);
   // ページの URL に #practice などを付け、再読み込みやブックマークで同じページを開けるようにする
-  history.replaceState(null, "", tab === "placement" ? location.pathname : `#${tab}`);
-  $("drill").hidden = tab === "stats" || tab === "vocab";
+  history.replaceState(null, "", tab === "home" ? location.pathname : `#${tab}`);
+  $("home-page").hidden = tab !== "home";
+  $("drill").hidden = tab === "home" || tab === "stats" || tab in VOCAB_TABS;
   $("stats").hidden = tab !== "stats";
-  $("vocab").hidden = tab !== "vocab";
+  $("vocab").hidden = !(tab in VOCAB_TABS);
   $("placement-result").hidden = true;
+  if (tab === "home") return;
   if (tab === "stats") {
     loadStats();
     return;
   }
-  if (tab === "vocab") {
-    window.showVocab();
+  if (tab in VOCAB_TABS) {
+    window.showVocab(VOCAB_TABS[tab]);
     return;
   }
   mode = tab;
@@ -637,9 +646,17 @@ const MATH_BUTTONS = [
 
   // 積分・極限で使う記号と、答え合わせ（右下の3列分）
   key("e", "ネイピア数 e", "e", ["e", ""]),
-  key("\\infty", "無限大（極限）", "\\infty", ["oo", ""]),
-  // 「C」だけだと全部消す（Clear）と紛らわしいので「+C」として、押すと + C まで入れる
-  key("+C", "積分定数 +C を入れる", "+C", ["+C", ""]),
+  // 答えが複数ある単元（方程式・関数）では「,」に替える（setListKeys）
+  {
+    ...key("\\infty", "無限大（極限）", "\\infty", ["oo", ""]),
+    alt: key(",", "答えの区切り（2, -3 など）", ",", [", ", ""], "fn", false),
+  },
+  // 「C」だけだと全部消す（Clear）と紛らわしいので「+C」として、押すと + C まで入れる。
+  // 答えが複数ある単元では「±」に替える
+  {
+    ...key("+C", "積分定数 +C を入れる", "+C", ["+C", ""]),
+    alt: key("\\pm", "プラスマイナス（1 ± √2 など）", "\\pm", ["±", ""]),
+  },
   act("答え合わせ", "答え合わせ（Enter）", "submit", "submit"),
 ];
 
@@ -715,6 +732,25 @@ function pressMathButton(b) {
 }
 
 const varButtons = []; // [{b, btn}] 変数のキー
+const altButtons = []; // [{b, btn}] 単元によって替わるキー（∞ ↔ ,、+C ↔ ±）
+let listKeys = null;
+
+function renderKeyLabel(btn, k) {
+  btn.title = k.title;
+  if (k.math) katex.render(k.label, btn, { throwOnError: false });
+  else btn.textContent = k.label;
+}
+
+// 答えが複数ある単元では、∞ と +C のキーを「,」と「±」に替える
+function setListKeys(on) {
+  if (on === listKeys) return;
+  listKeys = on;
+  for (const { b, btn } of altButtons) {
+    const k = on ? b.alt : b.base;
+    Object.assign(b, { label: k.label, title: k.title, latex: k.latex, text: k.text, math: k.math });
+    renderKeyLabel(btn, k);
+  }
+}
 let variable = null;
 
 function setVariable(v) {
@@ -734,6 +770,10 @@ function setupMathButtons() {
   for (const b of MATH_BUTTONS) {
     const btn = document.createElement("button");
     if (b.variable) varButtons.push({ b, btn });
+    if (b.alt) {
+      b.base = { label: b.label, title: b.title, latex: b.latex, text: b.text, math: b.math };
+      altButtons.push({ b, btn });
+    }
     btn.type = "button";
     btn.title = b.title;
     btn.className = `key key-${b.kind}`;
@@ -746,6 +786,7 @@ function setupMathButtons() {
     bar.appendChild(btn);
   }
   setVariable("x");
+  setListKeys(false);
 }
 
 // 長押し・右クリックで MathLive のメニュー（英語）が出ないようにする。
@@ -797,7 +838,8 @@ window.addEventListener("DOMContentLoaded", async () => {
     }),
   );
   setupMenu();
-  $("home").addEventListener("click", () => switchTab("placement"));
+  $("home").addEventListener("click", () => switchTab("home"));
+  document.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => switchTab(b.dataset.go)));
   $("new-problem").addEventListener("click", newProblem);
   $("type-select").addEventListener("change", newProblem);
   $("next").addEventListener("click", newProblem);
@@ -837,7 +879,8 @@ window.addEventListener("DOMContentLoaded", async () => {
   await loadUnits();
   await loadTypes();
   // トップは数学レベル診断。#practice などが付いていればそのページを開く
-  const hash = location.hash.slice(1);
-  switchTab(TABS.includes(hash) ? hash : "placement");
+  // 前の版の #vocab は漢字のページとして開く
+  const hash = location.hash.slice(1) === "vocab" ? "kanji" : location.hash.slice(1);
+  switchTab(TABS.includes(hash) ? hash : "home");
   refreshDueBadge();
 });

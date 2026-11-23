@@ -11,12 +11,28 @@ import sympy as sp
 
 from .checker import X, equivalent
 from .core import Misconception, Problem, ProblemType, Unit, tidy, to_latex  # noqa: F401（他のモジュール向けに再公開）
-from .units import application, definite, derivative, integral, limit, probability, sequence
+from . import form
+from .units import (
+    application,
+    calc,
+    definite,
+    derivative,
+    equation,
+    function,
+    integral,
+    limit,
+    probability,
+    sequence,
+    trig,
+)
 
-_UNIT_MODULES = [derivative, integral, definite, limit, application, sequence, probability]
+# 練習の単元の並び。中学・数I の単元を先に、そのあと数II 以降
+_UNIT_MODULES = [calc, equation, function, trig, probability, sequence, derivative, integral, definite, limit, application]
 
 UNITS: dict[str, Unit] = {m.UNIT.id: m.UNIT for m in _UNIT_MODULES}
-MISCONCEPTIONS: dict[str, Misconception] = {mc.id: mc for m in _UNIT_MODULES for mc in m.MISCONCEPTIONS}
+MISCONCEPTIONS: dict[str, Misconception] = {
+    mc.id: mc for m in [*_UNIT_MODULES, form] for mc in m.MISCONCEPTIONS
+}
 PROBLEM_TYPES: dict[str, ProblemType] = {t.id: t for m in _UNIT_MODULES for t in m.TYPES}
 
 
@@ -49,7 +65,7 @@ def generate(type_id: str, seed: int) -> Problem:
         if wrongs and not trivial:
             break
     prefix = b.answer_prefix or unit.answer_prefix
-    answer_latex = to_latex(tidy(answer)) + unit.answer_suffix
+    answer_latex = b.answer_latex or (to_latex(tidy(answer)) + unit.answer_suffix)
     return Problem(
         problem_id=f"{type_id}-{seed}",
         type_id=type_id,
@@ -63,6 +79,7 @@ def generate(type_id: str, seed: int) -> Problem:
         answer_latex=answer_latex,
         steps=b.steps + [f"${prefix} {answer_latex}$"],
         meta=b.meta,
+        form=ptype.form,
     )
 
 

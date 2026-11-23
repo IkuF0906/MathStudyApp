@@ -2,6 +2,7 @@ import sqlite3
 from datetime import datetime, timedelta
 
 import pytest
+import sympy as sp
 from fastapi.testclient import TestClient
 
 from drill.api import MAX_ANSWER_LENGTH, create_app
@@ -96,7 +97,10 @@ def test_stats(client):
 
 def test_units_and_types(client):
     units = [u["id"] for u in client.get("/api/units").json()]
-    assert units == ["derivative", "integral", "definite", "limit", "application", "sequence", "probability"]
+    assert units == [
+        "calc", "equation", "function", "trig", "probability", "sequence",
+        "derivative", "integral", "definite", "limit", "application",
+    ]  # fmt: skip
     types = client.get("/api/types", params={"unit": "limit"}).json()
     assert types and all(t["unit"] == "limit" for t in types)
     assert client.get("/api/types", params={"unit": "nope"}).status_code == 404
@@ -259,7 +263,7 @@ def test_placement_runs_to_the_end(client):
     assert len(set(seen)) == 20
     result = body["result"]
     assert result["answered"] == 20 and result["correct"] == 0
-    assert result["label"] == "数I・A未満"
+    assert result["label"] == "中学1年未満"
     # 診断で解いた問題は、復習の履歴にも残る
     attempts = sum(s["attempts"] for s in client.get("/api/stats").json())
     assert attempts == 20
@@ -269,11 +273,14 @@ def test_placement_grades_with_checker(client):
     start = client.post("/api/placement/start").json()
     from drill.templates import from_id
 
+    from drill.placement import START_LEVEL
+
     p = from_id(start["problem"]["problem_id"])
-    text = str(p.answer).replace("**", "^")
+    items = p.answer.args if isinstance(p.answer, (sp.Tuple, sp.FiniteSet)) else [p.answer]
+    text = ", ".join(str(e).replace("**", "^") for e in items)
     body = placement_answer(client, start["session_id"], p.problem_id, text).json()
     assert body["correct"] is True
-    assert body["theta"] > 7  # 最初は Lv7 の問題。正解すると推定が上がる
+    assert body["theta"] > START_LEVEL  # 最初は START_LEVEL の問題。正解すると推定が上がる
     assert body["next"]["index"] == 2
 
 
@@ -296,8 +303,11 @@ def test_placement_parse_error_keeps_problem(client):
     assert placement_answer(client, sid, pid, skip=True).status_code == 200
 
 
-def test_vocab_tab_is_served(client):
-    assert 'data-tab="vocab"' in client.get("/").text
+def test_top_page_and_vocab_are_served(client):
+    html = client.get("/").text
+    # トップから数学・漢字・英語の3つの診断へ進める
+    for tab in ("placement", "kanji", "english"):
+        assert f'data-go="{tab}"' in html and f'data-tab="{tab}"' in html
     js = client.get("/vocab.js")
     assert js.status_code == 200
     assert "showVocab" in js.text and "語彙" in js.text

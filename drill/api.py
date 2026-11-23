@@ -54,6 +54,7 @@ def _problem_json(p: Problem) -> dict:
         "latex": p.latex,
         "answer_prefix": p.answer_prefix,
         "variable": str(p.unit.var),
+        "list_answers": p.unit.list_answers,
     }
 
 

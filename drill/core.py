@@ -31,6 +31,8 @@ class Unit:
     answer_suffix: str = ""  # 正解の表示の後ろに付ける LaTeX（不定積分の + C）
     needs_constant: bool = False  # 積分定数 C を書くよう促す（不定積分）
     var: sp.Symbol = X  # 解答に使う変数（数列では n）
+    # 答えが複数ある問題がある単元（方程式の解・座標など）。入力ボタンに「,」と「±」を出す
+    list_answers: bool = False
 
     def allowed_symbols(self) -> set[sp.Symbol]:
         return {self.var, C} if self.needs_constant else {self.var}
@@ -47,6 +49,7 @@ class Built:
     answer: sp.Expr | None = None  # 正解。省略時は単元の solve で求める
     prompt: str | None = None  # 問題文。省略時は単元の既定
     answer_prefix: str | None = None  # 解答欄の左の表示。省略時は単元の既定
+    answer_latex: str | None = None  # 正解の表示。省略時は正解の式から作る（x = 1 ± √2 のようにまとめたいとき）
     meta: dict = field(default_factory=dict)  # テストでの検証用（定積分の区間、極限の行き先など）
 
 
@@ -57,9 +60,11 @@ class ProblemType:
     name: str
     description: str
     build: Callable[[random.Random], Built]
-    # 到達レベルの目安（レベル診断で使う）。6 = 数I・A、7 = 数II・B の微積・数列、
-    # 8 = 数B〜数III の入口、9 = 数III の極限・積分、10 = 大学教養。1〜5 は中学〜数I（今後追加）
+    # 到達レベルの目安（レベル診断で使う）。1〜3 = 中学1〜3年、4 = 数I（数と式）、5 = 数I（2次関数・三角比）、
+    # 6 = 数A（場合の数と確率）、7 = 数II・B、8 = 数III の入口、9 = 数III。定義は docs/levels.md
     level: int
+    # 答えに求める形（drill/form.py）。"expanded"・"factored"・"radical"。None なら値が合えば正解
+    form: str | None = None
 
 
 @dataclass
@@ -76,9 +81,12 @@ class Problem:
     answer_latex: str  # 正解の表示
     steps: list[str]
     meta: dict
+    form: str | None = None
 
 
-def to_latex(expr: sp.Expr) -> str:
+def to_latex(expr) -> str:
+    if isinstance(expr, (sp.Tuple, sp.FiniteSet)):  # 複数の答えは「2, -3」の形で並べる
+        return r",\ ".join(to_latex(e) for e in expr.args)
     return sp.latex(expr, ln_notation=True)
 
 
@@ -88,6 +96,10 @@ def tidy(expr: sp.Expr) -> sp.Expr:
     simplify は sin x + cos x を √2 cos(x - π/4) にするなど、教科書と違う形にすることがあるため、
     π を新たに持ち込まない候補のうち最も短いものを選ぶ。
     """
+    if isinstance(expr, sp.Tuple):
+        return sp.Tuple(*(tidy(e) for e in expr.args))
+    if isinstance(expr, sp.FiniteSet):  # 解は小さい順に並べる
+        return sp.Tuple(*sorted((tidy(e) for e in expr.args), key=lambda e: float(e)))
     if expr.has(N):  # 数列の答え。和の公式（2次以上）は n(n+1) のように因数分解した形が見やすい
         if expr.is_polynomial(N):
             return sp.factor(expr) if sp.degree(expr, N) >= 2 else sp.expand(expr)

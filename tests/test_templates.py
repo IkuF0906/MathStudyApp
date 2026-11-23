@@ -3,14 +3,18 @@
 正解は、問題の型が作ったものとは別に、単元の定義から求め直して比べる。
 """
 
+import math
 from itertools import combinations, permutations, product
 
 import pytest
 import sympy as sp
 from sympy.calculus.util import maximum
 
+from drill import form
 from drill.checker import N, X, equivalent
 from drill.templates import MISCONCEPTIONS, PROBLEM_TYPES, UNITS, from_id, generate
+
+Z = sp.Symbol("z", real=True)  # 方程式を解き直すときの変数（X は正の数に限っているので負の解を落とす）
 
 SEEDS = range(30)
 
@@ -76,9 +80,79 @@ def _probability(p) -> sp.Rational:
     raise AssertionError(p.type_id)
 
 
+def _real_roots(poly) -> set:
+    return set(sp.solve(poly.subs(X, Z), Z))
+
+
+def _num(v) -> float:
+    return float(sp.N(v))
+
+
+def check_middle_school(p) -> bool:
+    """中学〜数I の単元の正解を確かめる。対象外の型なら False。"""
+    m, t = p.meta, p.type_id
+    if t == "calc_signed":
+        expected = m["a"] - m["b"] * m["c"] if m["kind"] == "sub_mul" else (-m["a"]) ** 2 - m["b"] ** 2
+        assert p.answer == expected
+    elif t in ("calc_linear_expr", "calc_poly", "calc_monomial", "calc_expand"):
+        assert sp.expand(p.answer - m["expr"]) == 0
+        assert p.answer == sp.expand(p.answer), "展開した形になっていない"
+    elif t in ("calc_factor", "calc_factor_cross"):
+        assert sp.expand(p.answer - m["expanded"]) == 0
+        assert form._factored(p.answer), "因数分解しきった形になっていない"
+    elif t == "calc_sqrt":
+        assert math.isclose(_num(p.answer), math.sqrt(m["m"]) + m["sign"] * math.sqrt(m["n"]))
+        assert not form._radical_not_simplified(p.answer)
+    elif t == "calc_rationalize":
+        assert math.isclose(_num(p.answer), _num(p.f))
+        assert sp.fraction(sp.together(p.answer))[1].is_Integer, "分母に根号が残っている"
+    elif t == "eq_linear":
+        x0 = p.answer
+        assert m["a"] * x0 + m["b"] == m["c"] * x0 + m["d"]
+    elif t == "eq_system":
+        x0, y0 = p.answer
+        assert m["a"] * x0 + m["b"] * y0 == m["p"] and m["c"] * x0 + m["d"] * y0 == m["q"]
+    elif t in ("eq_quadratic_factor", "eq_quadratic_formula"):
+        assert _real_roots(m["poly"]) == set(p.answer)
+    elif t == "eq_discriminant":
+        k = sp.Symbol("k")
+        disc = k**2 - 4 * m["c"] ** 2 if m["kind"] == "k_middle" else m["b"] ** 2 - 4 * k
+        expected = set(sp.solve(disc, k))
+        assert expected == (set(p.answer) if isinstance(p.answer, sp.FiniteSet) else {p.answer})
+    elif t == "eq_abs":
+        assert set(p.answer) == {x for x in range(-30, 31) if abs(x - m["a"]) == m["b"]}
+    elif t == "fn_linear":
+        for x, y in m["points"]:
+            assert p.answer.subs(X, x) == y
+    elif t == "fn_vertex":
+        x0, y0 = p.answer
+        assert sp.diff(p.f, X).subs(X, x0) == 0 and p.f.subs(X, x0) == y0
+    elif t == "fn_max_min":
+        s_, t_ = m["s"], m["t"]
+        xs = [sp.Rational(i, 4) for i in range(4 * s_, 4 * t_ + 1)]  # 頂点は整数なので 1/4 刻みで足りる
+        values = [p.f.subs(X, x) for x in xs]
+        assert p.answer == (max(values) if m["kind"] == "max_inside" else min(values))
+    elif t == "trig_value":
+        f = {"sin": math.sin, "cos": math.cos, "tan": math.tan}[m["func"]]
+        assert math.isclose(_num(p.answer), f(math.radians(m["deg"])))
+    elif t == "trig_cosine_law":
+        b, c, a = m["b"], m["c"], _num(p.answer)
+        assert math.isclose(a * a, b * b + c * c - 2 * b * c * math.cos(math.radians(m["deg"])))
+        assert not form._radical_not_simplified(p.answer)
+    elif t == "trig_sine_law":
+        lhs = m["a"] / math.sin(math.radians(m["A"]))
+        assert math.isclose(lhs, _num(p.answer) / math.sin(math.radians(m["B"])))
+        assert not form._radical_not_simplified(p.answer)
+    else:
+        return False
+    return True
+
+
 def check_answer(p) -> None:
     """単元の定義に照らして、正解が正しいことを確かめる。"""
     unit = p.unit.id
+    if check_middle_school(p):
+        return
     if p.type_id == "dint_area":
         lo, hi = p.meta["lo"], p.meta["hi"]
         d = sp.expand(p.f - p.meta["line"])
@@ -178,4 +252,12 @@ def test_from_id_rejects(bad):
 
 def test_every_misconception_is_used():
     used = {mid for t in PROBLEM_TYPES for s in SEEDS for mid, _ in generate(t, s).wrongs}
-    assert used == set(MISCONCEPTIONS)
+    # 答えの形の誤り（展開しきっていない など）は誤答の式ではなく、書いた形で見つける
+    form_ids = {m.id for m in form.MISCONCEPTIONS}
+    assert used == set(MISCONCEPTIONS) - form_ids
+
+
+def test_every_level_has_types():
+    """レベル診断で測る Lv1（中1）〜Lv9（数III）に、どれも3つ以上の型がある。"""
+    for level in range(1, 10):
+        assert sum(t.level == level for t in PROBLEM_TYPES.values()) >= 3, level
