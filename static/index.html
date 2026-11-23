@@ -107,14 +107,14 @@
 
       <section class="pane placement-intro" id="placement-intro" hidden aria-labelledby="placement-title">
         <h2 id="placement-title">あなたの数学の到達レベルは？</h2>
-        <p>全20問の記述式テストで、到達レベル（中学1年 〜 数III）を推定します。最初は数I の問題から始まり、正解すると難しい問題、間違えると易しい問題が出ます。</p>
+        <p>全20問の記述式テストで、到達レベル（中学1年 〜 数III）を推定します。最初は数I の問題から始まり、正解すると難しい問題、間違えると易しい問題が出ます。途中では正誤を表示せず、20問を解き終えたあとにまとめて結果を出します。</p>
         <p class="hint">解けない問題は「わからない」を押して先へ進めます。結果では、レベルごとの正答と、よく出た間違いのパターンを確認できます。所要時間はおよそ20〜30分です。</p>
         <p class="error" id="placement-error" role="alert" hidden></p>
         <button type="button" id="placement-start" class="primary">診断をはじめる</button>
       </section>
 
       <div class="placement-progress" id="placement-progress" hidden>
-        <div class="placement-progress-text"><span id="placement-count"></span><span id="placement-theta"></span></div>
+        <div class="placement-progress-text"><span id="placement-count"></span></div>
         <div class="bar"><span id="placement-bar"></span></div>
       </div>
 
@@ -251,7 +251,7 @@
       <div class="vocab-head">
         <div>
           <h2 id="vocab-title">漢字の語彙チェック</h2>
-          <p class="hint">単語の意味を4つの中から選んでください。全20問で、正解すると難しい語、間違えると易しい語が出ます。知らない語は「わからない」を押すと推定が正確になります。</p>
+          <p class="hint">単語の意味を4つの中から選んでください。全20問で、正解すると難しい語、間違えると易しい語が出ます。知らない語は「わからない」を押すと推定が正確になります。正誤は20問を終えたあとにまとめて出します。</p>
         </div>
       </div>
       <div class="pane vocab-card" id="vocab-card" aria-live="polite"></div>

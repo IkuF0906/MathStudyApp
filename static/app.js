@@ -155,8 +155,10 @@ async function newProblem() {
 
 function showProblem(problem) {
   current = problem;
-  // 単元は出すが、問題の型は解き方のヒントになるので答え合わせの後にだけ出す
+  // 単元は出すが、問題の型は解き方のヒントになるので答え合わせの後にだけ出す。
+  // レベル診断では単元も出さない（結果を出すまで、何を測っているかを意識させない）
   $("unit-tag").textContent = current.unit_name;
+  $("unit-tag").hidden = mode === "placement";
   setMathText($("prompt"), current.prompt);
   setLatex($("problem"), current.latex);
   $("problem").hidden = !current.latex; // 文章題で式がないときは問題文だけを出す
@@ -229,8 +231,8 @@ function showPlacementIntro() {
 }
 
 function showPlacementProgress() {
+  // 途中の推定レベルや正誤は、結果を出すまで見せない
   $("placement-count").textContent = `${placement.answered + 1} / ${placement.total} 問目`;
-  $("placement-theta").textContent = placement.answered ? `いまの推定 Lv${placement.theta.toFixed(1)}` : "";
   $("placement-bar").style.width = `${(placement.answered / placement.total) * 100}%`;
   $("placement-progress").hidden = false;
 }
@@ -247,7 +249,7 @@ async function startPlacement() {
     return;
   }
   $("placement-error").hidden = true;
-  placement = { session_id: r.session_id, total: r.total, answered: 0, theta: 0, next: r.problem, result: null };
+  placement = { session_id: r.session_id, total: r.total, answered: 0, next: r.problem, result: null };
   $("placement-intro").hidden = true;
   nextPlacementStep();
 }
@@ -268,6 +270,9 @@ function nextPlacementStep() {
 
 // skip が真なら「わからない」として送る
 async function submitPlacement({ answer = "", skip = false }) {
+  // 返事を待つ間に二重に送らないようにする（次の問題を出すときに戻す）
+  $("submit").disabled = true;
+  $("placement-skip").disabled = true;
   let r;
   try {
     r = await api("/api/placement/answer", {
@@ -277,19 +282,17 @@ async function submitPlacement({ answer = "", skip = false }) {
     });
   } catch (e) {
     showError(e.message);
+    $("submit").disabled = false;
+    $("placement-skip").disabled = false;
     return;
   }
   $("error").hidden = true;
-  $("submit").disabled = true;
-  $("placement-skip").disabled = true;
   placement.answered = r.index;
-  placement.theta = r.theta;
   placement.next = r.next;
   placement.result = r.result;
-  $("placement-bar").style.width = `${(r.index / r.total) * 100}%`;
-  showResult(r);
-  $("next").textContent = r.result ? "診断結果を見る" : "次の問題へ進む";
   refreshDueBadge();
+  // 正誤・正しい答えは出さずに、そのまま次の問題（20問目のあとは結果）へ進む
+  nextPlacementStep();
 }
 
 function showPlacementResult(res) {

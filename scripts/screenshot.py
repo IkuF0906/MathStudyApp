@@ -127,6 +127,21 @@ def take_screenshots(out: Path, url: str) -> None:
         page.click("#vocab-begin")
         page.wait_for_selector(".vocab-opt")
         page.screenshot(path=out / "0_kanji_question.png")
+        page.click(".vocab-opt")
+        page.wait_for_timeout(100)
+        page.screenshot(path=out / "0_kanji_picked.png")  # 正誤の色が付かないこと
+
+        # 数学のレベル診断: 答えたら正誤を出さずに次の問題へ進むこと
+        page.click('.tab[data-tab="placement"]')
+        page.click("#placement-start")
+        page.wait_for_selector("#problem-card:not([hidden])")
+        page.wait_for_selector("#placement-count:has-text('1 / 20')")
+        page.click("#placement-skip")
+        page.wait_for_selector("#placement-count:has-text('2 / 20')")
+        if page.is_visible("#result") or page.is_visible("#unit-tag"):
+            problems.append("レベル診断の途中で、正誤か単元が見えている")
+        page.wait_for_timeout(500)
+        page.screenshot(path=out / "0_placement_question.png", full_page=True)
 
         open_page(page, "practice")  # URL の # だけを変えても読み込み直さないので、メニューから開く
         page.select_option("#type-select", "power")

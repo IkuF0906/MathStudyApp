@@ -172,17 +172,15 @@
     const r = o === null ? "idk" : o === q[1] ? "ok" : "ng";
     ans.push({ q, r });
     theta = estimate();
-    $("vocab-card").querySelectorAll(".vocab-opt").forEach((b) => {
-      b.disabled = true;
-      if (opts[+b.dataset.k] === q[1]) b.classList.add("ok");
-    });
+    // 正誤は結果を出すまで見せない。選んだものに印を付けるだけにする
+    $("vocab-card").querySelectorAll(".vocab-opt").forEach((b) => (b.disabled = true));
     $("vocab-idk").disabled = true;
-    if (btn && r === "ng") btn.classList.add("ng");
+    (btn || $("vocab-idk")).classList.add("picked");
     const l = lang;
     setTimeout(() => {
       if (lang !== l) return; // 待っている間に別の言語のページへ移った
       ans.length < N ? show() : result();
-    }, r === "ok" ? 350 : 900);
+    }, 300);
   }
 
   function result() {

@@ -625,8 +625,8 @@ code { font-family: ui-monospace, Consolas, monospace; background: var(--bg); pa
 .vocab-opt { display: flex; align-items: center; gap: 12px; text-align: left; min-height: 52px; padding: 8px 14px; border-radius: 12px; background: var(--surface-2); }
 @media (hover: hover) { .vocab-opt:not(:disabled):hover { border-color: var(--accent); } }
 .vocab-opt:disabled { cursor: default; color: var(--text); }
-.vocab-opt.ok { border-color: var(--ok); background: var(--accent-tint); color: var(--ok-ink); font-weight: 500; }
-.vocab-opt.ng { border-color: var(--ng); color: var(--ng-ink); }
+/* 選んだ選択肢（正誤は結果まで出さないので、色は正解・不正解と別のアクセントの枠にする） */
+.vocab-opt.picked, .vocab-idk.picked { border-color: var(--accent); background: var(--accent-tint); }
 .vocab-key { flex: none; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--border); font-size: 0.75rem; color: var(--muted); background: var(--surface); }
 .vocab-idk { width: 100%; margin-top: 10px; min-height: 46px; border-style: dashed; background: none; color: var(--muted); }
 .vocab-idk .vocab-key { width: 20px; height: 20px; margin-left: 6px; }
