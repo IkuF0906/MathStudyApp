@@ -332,11 +332,11 @@ def _build_expectation(rng):
 
 
 TYPES = [
-    ProblemType("prob_perm_comb", "probability", "順列と組合せ", r"${}_n\mathrm{P}_r$ と ${}_n\mathrm{C}_r$ の使い分け", _build_perm_comb),
-    ProblemType("prob_arrange", "probability", "いろいろな並べ方", r"円順列・同じものを含む順列・隣り合う並び方", _build_arrange),
-    ProblemType("prob_complement", "probability", "余事象（少なくとも 1 回）", r"$1 - (1-p)^n$", _build_complement),
-    ProblemType("prob_binomial", "probability", "反復試行", r"${}_n\mathrm{C}_k\,p^k(1-p)^{n-k}$", _build_binomial),
-    ProblemType("prob_draw", "probability", "玉を戻さずに取り出す", r"2 回目は残りの玉で考える", _build_draw),
-    ProblemType("prob_conditional", "probability", "条件付き確率", r"$P_B(A) = \frac{P(A \cap B)}{P(B)}$", _build_conditional),
-    ProblemType("prob_expectation", "probability", "期待値", r"$E = \sum x_i p_i$", _build_expectation),
+    ProblemType("prob_perm_comb", "probability", "順列と組合せ", r"${}_n\mathrm{P}_r$ と ${}_n\mathrm{C}_r$ の使い分け", _build_perm_comb, level=6),
+    ProblemType("prob_arrange", "probability", "いろいろな並べ方", r"円順列・同じものを含む順列・隣り合う並び方", _build_arrange, level=6),
+    ProblemType("prob_complement", "probability", "余事象（少なくとも 1 回）", r"$1 - (1-p)^n$", _build_complement, level=6),
+    ProblemType("prob_binomial", "probability", "反復試行", r"${}_n\mathrm{C}_k\,p^k(1-p)^{n-k}$", _build_binomial, level=6),
+    ProblemType("prob_draw", "probability", "玉を戻さずに取り出す", r"2 回目は残りの玉で考える", _build_draw, level=6),
+    ProblemType("prob_conditional", "probability", "条件付き確率", r"$P_B(A) = \frac{P(A \cap B)}{P(B)}$", _build_conditional, level=7),
+    ProblemType("prob_expectation", "probability", "期待値", r"$E = \sum x_i p_i$", _build_expectation, level=7),
 ]

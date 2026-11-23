@@ -230,3 +230,67 @@ def test_heavy_answer_times_out_and_worker_recovers(tmp_path):
         assert answer(client, "power-0", "-15x^4 + 15x^2").json()["correct"] is True
     finally:
         sb.close()
+
+
+# --- レベル診断 ---
+
+
+def placement_answer(client, session_id, problem_id, text="", skip=False):
+    return client.post(
+        "/api/placement/answer",
+        json={"session_id": session_id, "problem_id": problem_id, "answer": text, "skip": skip},
+    )
+
+
+def test_placement_runs_to_the_end(client):
+    start = client.post("/api/placement/start").json()
+    sid, problem = start["session_id"], start["problem"]
+    assert start["total"] == 20 and problem["index"] == 1
+    seen = []
+    for i in range(1, 21):
+        seen.append(problem["type_id"])
+        body = placement_answer(client, sid, problem["problem_id"], skip=True).json()
+        assert body["correct"] is False and body["index"] == i
+        if i < 20:
+            assert body["result"] is None
+            problem = body["next"]
+            assert problem["index"] == i + 1
+    assert body["next"] is None
+    assert len(set(seen)) == 20
+    result = body["result"]
+    assert result["answered"] == 20 and result["correct"] == 0
+    assert result["label"] == "数I・A未満"
+    # 診断で解いた問題は、復習の履歴にも残る
+    attempts = sum(s["attempts"] for s in client.get("/api/stats").json())
+    assert attempts == 20
+
+
+def test_placement_grades_with_checker(client):
+    start = client.post("/api/placement/start").json()
+    from drill.templates import from_id
+
+    p = from_id(start["problem"]["problem_id"])
+    text = str(p.answer).replace("**", "^")
+    body = placement_answer(client, start["session_id"], p.problem_id, text).json()
+    assert body["correct"] is True
+    assert body["theta"] > 7  # 最初は Lv7 の問題。正解すると推定が上がる
+    assert body["next"]["index"] == 2
+
+
+def test_placement_rejects_stale_or_foreign_answers(client):
+    start = client.post("/api/placement/start").json()
+    sid, pid = start["session_id"], start["problem"]["problem_id"]
+    assert placement_answer(client, sid, "power-0", skip=True).status_code == 409
+    assert placement_answer(client, "nope", pid, skip=True).status_code == 404
+    assert placement_answer(client, sid, pid, skip=True).status_code == 200
+    assert placement_answer(client, sid, pid, skip=True).status_code == 409  # 同じ問題に2回は答えられない
+    # 別の利用者（Cookie なし）からは見えない
+    client.cookies.clear()
+    assert placement_answer(client, sid, pid, skip=True).status_code == 404
+
+
+def test_placement_parse_error_keeps_problem(client):
+    start = client.post("/api/placement/start").json()
+    sid, pid = start["session_id"], start["problem"]["problem_id"]
+    assert placement_answer(client, sid, pid, "(x+").status_code == 400
+    assert placement_answer(client, sid, pid, skip=True).status_code == 200

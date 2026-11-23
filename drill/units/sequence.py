@@ -279,10 +279,10 @@ def _build_recur(rng):
 
 
 TYPES = [
-    ProblemType("seq_arith", "sequence", "等差数列の一般項", r"$a_n = a + (n-1)d$", _build_arith),
-    ProblemType("seq_arith_sum", "sequence", "等差数列の和（文章題）", r"$S_n = \frac{n\{2a + (n-1)d\}}{2}$", _build_arith_sum),
-    ProblemType("seq_geom_sum", "sequence", "等比数列の和（文章題）", r"$S_n = \frac{a(r^n - 1)}{r - 1}$", _build_geom_sum),
-    ProblemType("seq_sigma", "sequence", "Σ の計算", r"$\sum k^2$、$\sum k$、$\sum c$ の公式", _build_sigma),
-    ProblemType("seq_diff", "sequence", "階差数列", r"$a_n = a_1 + \sum_{k=1}^{n-1} b_k$", _build_diff),
-    ProblemType("seq_recur", "sequence", "漸化式 a(n+1) = p a(n) + q", r"$a_{n+1} - \alpha = p(a_n - \alpha)$", _build_recur),
+    ProblemType("seq_arith", "sequence", "等差数列の一般項", r"$a_n = a + (n-1)d$", _build_arith, level=7),
+    ProblemType("seq_arith_sum", "sequence", "等差数列の和（文章題）", r"$S_n = \frac{n\{2a + (n-1)d\}}{2}$", _build_arith_sum, level=7),
+    ProblemType("seq_geom_sum", "sequence", "等比数列の和（文章題）", r"$S_n = \frac{a(r^n - 1)}{r - 1}$", _build_geom_sum, level=7),
+    ProblemType("seq_sigma", "sequence", "Σ の計算", r"$\sum k^2$、$\sum k$、$\sum c$ の公式", _build_sigma, level=7),
+    ProblemType("seq_diff", "sequence", "階差数列", r"$a_n = a_1 + \sum_{k=1}^{n-1} b_k$", _build_diff, level=8),
+    ProblemType("seq_recur", "sequence", "漸化式 a(n+1) = p a(n) + q", r"$a_{n+1} - \alpha = p(a_n - \alpha)$", _build_recur, level=8),
 ]

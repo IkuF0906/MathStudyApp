@@ -1,5 +1,6 @@
 """解答履歴と、型ごとの復習状態を利用者ごとに SQLite に保存する。"""
 
+import json
 import sqlite3
 import threading
 from collections import Counter
@@ -29,6 +30,12 @@ CREATE TABLE IF NOT EXISTS type_state (
     PRIMARY KEY (user_id, type_id)
 );
 CREATE INDEX IF NOT EXISTS attempts_user ON attempts (user_id, type_id);
+CREATE TABLE IF NOT EXISTS placement (
+    session_id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    data TEXT NOT NULL
+);
 """
 
 # 利用者を区別する前の DB の履歴は、この利用者のものとして引き継ぐ
@@ -114,3 +121,20 @@ class Store:
         for r in rows:
             counts.setdefault(r["type_id"], Counter())[r["misconception_id"]] += 1
         return counts
+
+    def save_placement(self, session_id: str, user_id: str, data: dict, now: datetime) -> None:
+        """レベル診断の途中経過（出題中の問題と、これまでの回答）を保存する。"""
+        with self._lock, self._conn:
+            self._conn.execute(
+                "INSERT INTO placement (session_id, user_id, created_at, data) VALUES (?, ?, ?, ?)"
+                " ON CONFLICT (session_id) DO UPDATE SET data = excluded.data",
+                (session_id, user_id, now.isoformat(), json.dumps(data, ensure_ascii=False)),
+            )
+
+    def placement(self, session_id: str, user_id: str) -> dict | None:
+        """利用者のレベル診断の途中経過。ほかの利用者のものや、ないものは None。"""
+        with self._lock:
+            r = self._conn.execute(
+                "SELECT data FROM placement WHERE session_id = ? AND user_id = ?", (session_id, user_id)
+            ).fetchone()
+        return json.loads(r["data"]) if r else None

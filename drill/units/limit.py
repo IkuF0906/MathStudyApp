@@ -191,9 +191,9 @@ def _build_sqrt(rng):
 
 TYPES = [
     # 型の名前は選択肢にそのまま出すので LaTeX を使わない
-    ProblemType("lim_rational", "limit", "分数式（x → ∞）", r"次数を比べる", _build_rational),
-    ProblemType("lim_factor", "limit", "0/0 の約分", r"因数分解して約分する", _build_factor),
-    ProblemType("lim_sin", "limit", "sin x / x の極限", r"$\lim_{x \to 0} \frac{\sin x}{x} = 1$", _build_sin),
-    ProblemType("lim_e", "limit", "e の定義", r"$\lim_{x \to \infty} \left(1 + \frac{1}{x}\right)^x = e$", _build_e),
-    ProblemType("lim_sqrt", "limit", "∞ − ∞ の有理化", r"$\sqrt{x^2 + px} - x$", _build_sqrt),
+    ProblemType("lim_rational", "limit", "分数式（x → ∞）", r"次数を比べる", _build_rational, level=8),
+    ProblemType("lim_factor", "limit", "0/0 の約分", r"因数分解して約分する", _build_factor, level=8),
+    ProblemType("lim_sin", "limit", "sin x / x の極限", r"$\lim_{x \to 0} \frac{\sin x}{x} = 1$", _build_sin, level=9),
+    ProblemType("lim_e", "limit", "e の定義", r"$\lim_{x \to \infty} \left(1 + \frac{1}{x}\right)^x = e$", _build_e, level=9),
+    ProblemType("lim_sqrt", "limit", "∞ − ∞ の有理化", r"$\sqrt{x^2 + px} - x$", _build_sqrt, level=9),
 ]

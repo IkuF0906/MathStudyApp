@@ -18,11 +18,11 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import scheduler
+from . import placement, scheduler
 from .checker import AnswerParseError
 from .db import LOCAL_USER, Store
 from .sandbox import Busy, ComputeTimeout, Sandbox, from_env
-from .templates import MISCONCEPTIONS, PROBLEM_TYPES, UNITS, Problem, generate
+from .templates import MISCONCEPTIONS, PROBLEM_TYPES, UNITS, Problem, from_id, generate
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 USER_COOKIE = "drill_uid"
@@ -34,6 +34,13 @@ MAX_ANSWER_LENGTH = 300
 class AnswerRequest(BaseModel):
     problem_id: str
     answer: str
+
+
+class PlacementAnswerRequest(BaseModel):
+    session_id: str
+    problem_id: str
+    answer: str = ""
+    skip: bool = False  # 「わからない」（答え合わせをせずに不正解とする）
 
 
 def _problem_json(p: Problem) -> dict:
@@ -155,13 +162,13 @@ def create_app(
         """テキスト入力の解答がどの式として読み取られるかを返す（答え合わせ前の確認用）。"""
         return {"latex": grade("preview", text)}
 
-    @app.post("/api/answer")
-    def answer(req: AnswerRequest, uid: str = Depends(user_id)):
-        g = grade("check", req.answer, req.problem_id)
+    def check_and_record(uid: str, problem_id: str, text: str) -> tuple[dict, dict]:
+        """答え合わせをして履歴に残す。(答え合わせの結果, 画面に返す内容) を返す。"""
+        g = grade("check", text, problem_id)
         mid = g["misconception_id"]
         mc = MISCONCEPTIONS[mid] if mid else None
-        state = store.record(uid, g["problem_id"], g["type_id"], req.answer, g["correct"], mid, now())
-        return {
+        state = store.record(uid, g["problem_id"], g["type_id"], text, g["correct"], mid, now())
+        return g, {
             "correct": g["correct"],
             "user_latex": g["user_latex"],
             "answer_latex": g["answer_latex"],
@@ -170,6 +177,66 @@ def create_app(
             "steps": g["steps"],
             "next_due": state.due_at.isoformat(),
         }
+
+    @app.post("/api/answer")
+    def answer(req: AnswerRequest, uid: str = Depends(user_id)):
+        return check_and_record(uid, req.problem_id, req.answer)[1]
+
+    # --- レベル診断 ---
+
+    def placement_problem(data: dict, rng: random.Random) -> dict:
+        """次の型を選んで問題を作り、途中経過に「出題中」として入れる。"""
+        responses = [placement.Response(**r) for r in data["responses"]]
+        p = _new_problem(placement.next_type(responses, rng))
+        data["current"] = p.problem_id
+        return {**_problem_json(p), "index": len(responses) + 1, "total": placement.TOTAL}
+
+    @app.post("/api/placement/start")
+    def placement_start(uid: str = Depends(user_id)):
+        session_id = uuid.uuid4().hex
+        data = {"responses": [], "current": None}
+        problem = placement_problem(data, random.Random())
+        store.save_placement(session_id, uid, data, now())
+        return {"session_id": session_id, "total": placement.TOTAL, "problem": problem}
+
+    @app.post("/api/placement/answer")
+    def placement_answer(req: PlacementAnswerRequest, uid: str = Depends(user_id)):
+        data = store.placement(req.session_id, uid)
+        if data is None:
+            raise HTTPException(404, "診断が見つかりません。はじめからやり直してください")
+        if data["current"] is None or req.problem_id != data["current"]:
+            raise HTTPException(409, "この問題の答えはもう受け付けていません")
+        type_id = req.problem_id.rpartition("-")[0]
+        if req.skip:
+            p = from_id(req.problem_id)
+            state = store.record(uid, p.problem_id, type_id, "", False, None, now())
+            correct, mid = False, None
+            body = {
+                "correct": False,
+                "skipped": True,
+                "user_latex": "",
+                "answer_latex": p.answer_latex,
+                "misconception": None,
+                "note": None,
+                "steps": p.steps,
+                "next_due": state.due_at.isoformat(),
+            }
+        else:
+            g, body = check_and_record(uid, req.problem_id, req.answer)
+            correct, mid = g["correct"], g["misconception_id"]
+        data["responses"].append(
+            {"type_id": type_id, "level": PROBLEM_TYPES[type_id].level, "correct": correct, "misconception_id": mid}
+        )
+        responses = [placement.Response(**r) for r in data["responses"]]
+        done = len(responses) >= placement.TOTAL
+        data["current"] = None
+        body["theta"] = round(placement.estimate(responses), 2)
+        body["index"] = len(responses)
+        body["total"] = placement.TOTAL
+        body["next"] = None if done else placement_problem(data, random.Random())
+        body["result"] = placement.summarize(responses) if done else None
+        store.save_placement(req.session_id, uid, data, now())
+        return body
 
     @app.get("/api/stats")
     def stats(uid: str = Depends(user_id)):

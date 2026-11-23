@@ -301,12 +301,12 @@ def _build_mixed(rng):
 
 
 TYPES = [
-    ProblemType("power", "derivative", "多項式", r"$x^n$ の和の微分", _build_power),
-    ProblemType("power_general", "derivative", "負・分数の指数", r"$\frac{1}{x^n}$ や $\sqrt{x}$ の微分", _build_power_general),
-    ProblemType("product", "derivative", "積の微分", r"$(uv)' = u'v + uv'$", _build_product),
-    ProblemType("quotient", "derivative", "商の微分", r"$\left(\frac{u}{v}\right)' = \frac{u'v - uv'}{v^2}$", _build_quotient),
-    ProblemType("chain", "derivative", "合成関数の微分", r"$\{g(h(x))\}' = g'(h(x))\,h'(x)$", _build_chain),
-    ProblemType("trig", "derivative", "三角関数", r"$\sin kx$、$\cos kx$ の微分", _build_trig),
-    ProblemType("explog", "derivative", "指数・対数関数", r"$a^x$、$e^{kx}$、$\ln$ の微分", _build_explog),
-    ProblemType("mixed", "derivative", "積＋合成関数", r"$x^n \sin kx$ などの組み合わせ", _build_mixed),
+    ProblemType("power", "derivative", "多項式", r"$x^n$ の和の微分", _build_power, level=7),
+    ProblemType("power_general", "derivative", "負・分数の指数", r"$\frac{1}{x^n}$ や $\sqrt{x}$ の微分", _build_power_general, level=8),
+    ProblemType("product", "derivative", "積の微分", r"$(uv)' = u'v + uv'$", _build_product, level=8),
+    ProblemType("quotient", "derivative", "商の微分", r"$\left(\frac{u}{v}\right)' = \frac{u'v - uv'}{v^2}$", _build_quotient, level=8),
+    ProblemType("chain", "derivative", "合成関数の微分", r"$\{g(h(x))\}' = g'(h(x))\,h'(x)$", _build_chain, level=8),
+    ProblemType("trig", "derivative", "三角関数", r"$\sin kx$、$\cos kx$ の微分", _build_trig, level=8),
+    ProblemType("explog", "derivative", "指数・対数関数", r"$a^x$、$e^{kx}$、$\ln$ の微分", _build_explog, level=8),
+    ProblemType("mixed", "derivative", "積＋合成関数", r"$x^n \sin kx$ などの組み合わせ", _build_mixed, level=9),
 ]

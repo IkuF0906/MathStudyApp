@@ -57,6 +57,9 @@ class ProblemType:
     name: str
     description: str
     build: Callable[[random.Random], Built]
+    # 到達レベルの目安（レベル診断で使う）。6 = 数I・A、7 = 数II・B の微積・数列、
+    # 8 = 数B〜数III の入口、9 = 数III の極限・積分、10 = 大学教養。1〜5 は中学〜数I（今後追加）
+    level: int
 
 
 @dataclass

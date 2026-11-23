@@ -207,9 +207,9 @@ def _build_distance(rng):
 
 
 TYPES = [
-    ProblemType("dint_poly", "definite", "多項式", r"$\int_a^b (ax^2 + bx + c)\,dx$", _build_poly),
-    ProblemType("dint_trig", "definite", "三角関数", r"$\int_0^{\pi} \sin x\,dx$ など", _build_trig),
-    ProblemType("dint_explog", "definite", "指数・対数関数", r"$\int_0^1 e^{kx}\,dx$、$\int_1^e \frac{1}{x}\,dx$ など", _build_explog),
-    ProblemType("dint_area", "definite", "囲まれた部分の面積（文章題）", r"$\int_\alpha^\beta (\text{上} - \text{下})\,dx$", _build_area),
-    ProblemType("dint_distance", "definite", "速度と道のり（文章題）", r"$\int |v(t)|\,dt$", _build_distance),
+    ProblemType("dint_poly", "definite", "多項式", r"$\int_a^b (ax^2 + bx + c)\,dx$", _build_poly, level=7),
+    ProblemType("dint_trig", "definite", "三角関数", r"$\int_0^{\pi} \sin x\,dx$ など", _build_trig, level=8),
+    ProblemType("dint_explog", "definite", "指数・対数関数", r"$\int_0^1 e^{kx}\,dx$、$\int_1^e \frac{1}{x}\,dx$ など", _build_explog, level=9),
+    ProblemType("dint_area", "definite", "囲まれた部分の面積（文章題）", r"$\int_\alpha^\beta (\text{上} - \text{下})\,dx$", _build_area, level=7),
+    ProblemType("dint_distance", "definite", "速度と道のり（文章題）", r"$\int |v(t)|\,dt$", _build_distance, level=8),
 ]

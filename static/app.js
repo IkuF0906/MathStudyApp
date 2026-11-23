@@ -1,6 +1,6 @@
 const $ = (id) => document.getElementById(id);
 
-let mode = "practice"; // practice | review
+let mode = "practice"; // practice | review | placement
 let current = null; // 表示中の問題
 let useText = false; // MathLive の代わりにテキスト入力を使う
 // スマホ・タブレット（指で操作する端末）。入力欄に自動でフォーカスすると、キーボードが開いて画面が隠れる
@@ -127,20 +127,30 @@ async function selectUnit(unit, newOne = true) {
 }
 
 async function newProblem() {
+  if (mode === "placement") {
+    nextPlacementStep();
+    return;
+  }
   const unit = selectedUnit;
   const type = $("type-select").value;
   let path;
   if (mode === "review") path = withUnit("/api/review", unit);
   else if (type) path = `/api/problem?type=${type}`;
   else path = withUnit("/api/problem", unit);
+  let problem;
   try {
-    current = await api(path);
+    problem = await api(path);
   } catch (e) {
     // 前の問題があればそのまま残し、取れなかったことだけを伝える
     showError(`問題を読み込めませんでした: ${e.message}`);
     $("problem-card").hidden = false;
     return;
   }
+  showProblem(problem);
+}
+
+function showProblem(problem) {
+  current = problem;
   // 単元は出すが、問題の型は解き方のヒントになるので答え合わせの後にだけ出す
   $("unit-tag").textContent = current.unit_name;
   setMathText($("prompt"), current.prompt);
@@ -154,6 +164,9 @@ async function newProblem() {
   $("preview").hidden = true;
   $("result").hidden = true;
   $("problem-card").hidden = false;
+  $("placement-skip").hidden = mode !== "placement";
+  $("placement-skip").disabled = false;
+  $("next").textContent = "次の問題へ進む";
   resetNote();
   activeField = null;
   $("submit").disabled = false;
@@ -174,6 +187,10 @@ function readAnswer() {
 async function submit() {
   if (!current || $("submit").disabled) return;
   const answer = readAnswer();
+  if (mode === "placement") {
+    submitPlacement({ answer });
+    return;
+  }
   let result;
   try {
     result = await api("/api/answer", {
@@ -191,6 +208,149 @@ async function submit() {
   refreshDueBadge();
 }
 
+// --- レベル診断 ---
+
+// 診断の途中経過。{session_id, total, answered, next（次の問題）, result（終わったら結果）}
+let placement = null;
+
+function showPlacementIntro() {
+  $("placement-intro").hidden = false;
+  $("placement-progress").hidden = true;
+  $("problem-card").hidden = true;
+  $("result").hidden = true;
+  $("placement-result").hidden = true;
+  $("drill").hidden = false;
+  $("placement-start").disabled = false;
+}
+
+function showPlacementProgress() {
+  $("placement-count").textContent = `${placement.answered + 1} / ${placement.total} 問目`;
+  $("placement-theta").textContent = placement.answered ? `いまの推定 Lv${placement.theta.toFixed(1)}` : "";
+  $("placement-bar").style.width = `${(placement.answered / placement.total) * 100}%`;
+  $("placement-progress").hidden = false;
+}
+
+async function startPlacement() {
+  $("placement-start").disabled = true;
+  let r;
+  try {
+    r = await api("/api/placement/start", { method: "POST" });
+  } catch (e) {
+    $("placement-error").textContent = `診断を始められませんでした: ${e.message}`;
+    $("placement-error").hidden = false;
+    $("placement-start").disabled = false;
+    return;
+  }
+  $("placement-error").hidden = true;
+  placement = { session_id: r.session_id, total: r.total, answered: 0, theta: 0, next: r.problem, result: null };
+  $("placement-intro").hidden = true;
+  nextPlacementStep();
+}
+
+// 「次の問題へ」: 次の問題を出すか、終わっていれば結果を出す
+function nextPlacementStep() {
+  if (!placement) {
+    showPlacementIntro();
+    return;
+  }
+  if (placement.result) {
+    showPlacementResult(placement.result);
+    return;
+  }
+  showPlacementProgress();
+  showProblem(placement.next);
+}
+
+// skip が真なら「わからない」として送る
+async function submitPlacement({ answer = "", skip = false }) {
+  let r;
+  try {
+    r = await api("/api/placement/answer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: placement.session_id, problem_id: current.problem_id, answer, skip }),
+    });
+  } catch (e) {
+    showError(e.message);
+    return;
+  }
+  $("error").hidden = true;
+  $("submit").disabled = true;
+  $("placement-skip").disabled = true;
+  placement.answered = r.index;
+  placement.theta = r.theta;
+  placement.next = r.next;
+  placement.result = r.result;
+  $("placement-bar").style.width = `${(r.index / r.total) * 100}%`;
+  showResult(r);
+  $("next").textContent = r.result ? "診断結果を見る" : "次の問題へ進む";
+  refreshDueBadge();
+}
+
+function showPlacementResult(res) {
+  $("drill").hidden = true;
+  $("placement-result").hidden = false;
+  $("pr-label").textContent = res.label;
+  $("pr-theta").textContent = `推定レベル ${res.theta.toFixed(1)}（±${res.se.toFixed(1)}）・正解 ${res.correct} / ${res.answered} 問`;
+
+  const rows = $("pr-levels");
+  rows.innerHTML = "";
+  for (const b of res.by_level) {
+    const row = el("div", "level-row");
+    if (b.level === res.level) row.classList.add("reached");
+    const bar = el("div", "bar");
+    const fill = el("span");
+    fill.style.width = `${Math.round(b.p * 100)}%`;
+    bar.appendChild(fill);
+    bar.setAttribute("aria-label", `推定正答率 ${Math.round(b.p * 100)}%`);
+    row.append(
+      el("span", "lv", `Lv${b.level}`),
+      el("span", "name", b.name),
+      bar,
+      el("span", "n", b.attempts ? `${b.correct}/${b.attempts}` : "–"),
+    );
+    rows.appendChild(row);
+  }
+
+  const mistakes = $("pr-mistakes");
+  mistakes.innerHTML = "";
+  for (const m of res.misconceptions) {
+    const item = el("div", "weak-item");
+    const body = el("div", "weak-body");
+    const name = el("div", "weak-name");
+    setMathText(name, `${m.label}（${m.count}回）`);
+    const detail = el("div", "weak-detail");
+    setMathText(detail, m.explanation);
+    body.append(name, detail);
+    item.appendChild(body);
+    mistakes.appendChild(item);
+  }
+  if (res.unclassified_wrong) {
+    mistakes.appendChild(
+      el("p", "hint", `ほかに、よくある間違いのパターンに当てはまらない誤答・「わからない」が ${res.unclassified_wrong} 問ありました。`),
+    );
+  }
+  $("pr-mistakes-box").hidden = !res.misconceptions.length && !res.unclassified_wrong;
+
+  const missed = $("pr-missed");
+  missed.innerHTML = "";
+  for (const m of res.missed) {
+    const item = el("div", "weak-item");
+    const body = el("div", "weak-body");
+    const name = el("div", "weak-name", m.type_name);
+    name.appendChild(el("small", "", `／ ${m.unit_name}・Lv${m.level}`));
+    body.appendChild(name);
+    const go = el("button", "", "この型を練習する");
+    go.type = "button";
+    go.addEventListener("click", () => practiceType(m.unit_id, m.type_id));
+    item.append(body, go);
+    missed.appendChild(item);
+  }
+  $("pr-missed-box").hidden = !res.missed.length;
+  $("placement-review").hidden = !res.missed.length;
+  window.scrollTo({ top: 0, behavior: reduceMotion() ? "auto" : "smooth" });
+}
+
 const ICON_CHECK = '<svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>';
 const ICON_CROSS = '<svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
 
@@ -199,13 +359,14 @@ function showResult(r) {
   result.classList.toggle("ok", r.correct);
   result.classList.toggle("ng", !r.correct);
   $("verdict-icon").innerHTML = r.correct ? ICON_CHECK : ICON_CROSS;
-  $("verdict").textContent = r.correct ? "正解！" : "不正解";
+  $("verdict").textContent = r.correct ? "正解！" : r.skipped ? "わからない" : "不正解";
   setMathText($("problem-type"), `${current.unit_name} ／ ${current.type_name}`);
-  setLatex($("user-answer"), r.user_latex);
+  if (r.skipped) $("user-answer").textContent = "（答えなかった）";
+  else setLatex($("user-answer"), r.user_latex);
   setLatex($("correct-answer"), r.answer_latex);
 
   const diag = $("diagnosis");
-  diag.hidden = r.correct;
+  diag.hidden = r.correct || r.skipped;
   if (!r.correct) {
     if (r.misconception) {
       setMathText($("diag-label"), r.misconception.label);
@@ -350,13 +511,24 @@ function switchTab(tab) {
   });
   $("drill").hidden = tab === "stats";
   $("stats").hidden = tab !== "stats";
+  $("placement-result").hidden = true;
   if (tab === "stats") {
     loadStats();
     return;
   }
   mode = tab;
+  $("toolbar").hidden = tab === "placement";
+  $("placement-intro").hidden = true;
+  $("placement-progress").hidden = true;
   $("type-label").hidden = tab !== "practice";
   $("review-hint").hidden = tab !== "review";
+  if (tab === "placement") {
+    // 途中の診断があれば、解いていた問題（答え合わせ後なら結果の画面）に戻る
+    if (!placement) showPlacementIntro();
+    else if (placement.result) showPlacementResult(placement.result);
+    else nextPlacementStep();
+    return;
+  }
   newProblem();
 }
 
@@ -593,6 +765,15 @@ window.addEventListener("DOMContentLoaded", async () => {
   $("new-problem").addEventListener("click", newProblem);
   $("type-select").addEventListener("change", newProblem);
   $("next").addEventListener("click", newProblem);
+  $("placement-start").addEventListener("click", startPlacement);
+  $("placement-skip").addEventListener("click", () => {
+    if (!$("placement-skip").disabled) submitPlacement({ skip: true });
+  });
+  $("placement-again").addEventListener("click", () => {
+    placement = null;
+    showPlacementIntro();
+  });
+  $("placement-review").addEventListener("click", () => switchTab("review"));
   $("start-review").addEventListener("click", () => switchTab("review"));
   $("stats-retry").addEventListener("click", loadStats);
   $("toggle-input").addEventListener("click", toggleInput);

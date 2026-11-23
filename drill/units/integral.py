@@ -244,10 +244,10 @@ def _build_parts(rng):
 
 
 TYPES = [
-    ProblemType("int_power", "integral", "多項式", r"$\int x^n\,dx = \frac{x^{n+1}}{n+1} + C$", _build_power),
-    ProblemType("int_power_general", "integral", "負・分数の指数", r"$\int \frac{1}{x^2}\,dx$、$\int \sqrt{x}\,dx$ など", _build_power_general),
-    ProblemType("int_trig", "integral", "三角関数", r"$\int \sin kx\,dx$、$\int \cos kx\,dx$", _build_trig),
-    ProblemType("int_explog", "integral", "指数・対数関数", r"$\int e^{kx}\,dx$、$\int \frac{1}{kx+b}\,dx$、$\int a^x\,dx$", _build_explog),
-    ProblemType("int_linear", "integral", "1次式の合成", r"$\int (kx+b)^n\,dx$", _build_linear),
-    ProblemType("int_parts", "integral", "部分積分", r"$\int u v'\,dx = uv - \int u'v\,dx$", _build_parts),
+    ProblemType("int_power", "integral", "多項式", r"$\int x^n\,dx = \frac{x^{n+1}}{n+1} + C$", _build_power, level=7),
+    ProblemType("int_power_general", "integral", "負・分数の指数", r"$\int \frac{1}{x^2}\,dx$、$\int \sqrt{x}\,dx$ など", _build_power_general, level=8),
+    ProblemType("int_trig", "integral", "三角関数", r"$\int \sin kx\,dx$、$\int \cos kx\,dx$", _build_trig, level=8),
+    ProblemType("int_explog", "integral", "指数・対数関数", r"$\int e^{kx}\,dx$、$\int \frac{1}{kx+b}\,dx$、$\int a^x\,dx$", _build_explog, level=9),
+    ProblemType("int_linear", "integral", "1次式の合成", r"$\int (kx+b)^n\,dx$", _build_linear, level=8),
+    ProblemType("int_parts", "integral", "部分積分", r"$\int u v'\,dx = uv - \int u'v\,dx$", _build_parts, level=9),
 ]

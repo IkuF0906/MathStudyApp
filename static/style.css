@@ -512,6 +512,32 @@ code { font-family: ui-monospace, Consolas, monospace; background: var(--bg); pa
 
 .stats-error { margin: 0 0 16px; }
 
+/* --- レベル診断 --- */
+
+.placement-intro { padding: 22px 26px; max-width: 720px; }
+.placement-intro h2 { margin: 0 0 8px; font-size: 1.3rem; font-weight: 500; }
+.placement-intro p { margin: 0 0 12px; }
+#placement-start, #placement-again { height: 48px; padding: 0 28px; }
+.placement-progress { margin-bottom: 12px; }
+.placement-progress-text { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+#placement-bar { transition: width 0.2s; }
+#placement-result > .pane { margin-bottom: 16px; }
+#placement-result > .pane:not(.weak) { padding: 16px 22px; }
+#placement-result h2 { margin: 0 0 10px; font-size: 1rem; font-weight: 500; }
+.placement-summary { background: var(--accent-tint); border-color: var(--accent-soft); }
+.placement-label { margin: 2px 0; font-size: 2rem; font-weight: 500; line-height: 1.25; }
+.placement-theta { margin: 0; color: var(--muted); font-variant-numeric: tabular-nums; }
+.level-rows { display: grid; gap: 8px; margin-bottom: 10px; }
+.level-row { display: grid; grid-template-columns: 2.8em 9em minmax(0, 1fr) 3em; gap: 10px; align-items: center; font-size: 0.9rem; }
+.level-row .lv { font-weight: 500; font-variant-numeric: tabular-nums; }
+.level-row .name { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.level-row .bar { margin: 0; height: 10px; }
+.level-row .n { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+.level-row.reached .lv, .level-row.reached .name { color: var(--accent-ink); }
+.placement-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.placement-actions button { height: 48px; padding: 0 22px; }
+@media (prefers-reduced-motion: reduce) { #placement-bar { transition: none; } }
+
 /* スマホ（幅 600px まで）: 余白を詰め、ノートはボタンで開いたときだけ出す */
 @media (max-width: 600px) {
   .topbar-inner { padding: 10px 12px; flex-wrap: nowrap; }
@@ -547,4 +573,8 @@ code { font-family: ui-monospace, Consolas, monospace; background: var(--bg); pa
   .tile { padding: 12px 16px; }
   .tile-value { font-size: 1.8rem; }
   .unit-grid { grid-template-columns: minmax(0, 1fr); }
+  .tab-long { display: none; }
+  .placement-intro { padding: 16px; }
+  .placement-label { font-size: 1.6rem; }
+  .level-row { grid-template-columns: 2.6em 6.5em minmax(0, 1fr) 2.8em; }
 }

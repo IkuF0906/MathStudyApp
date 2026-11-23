@@ -195,8 +195,8 @@ def _build_box(rng):
 
 
 TYPES = [
-    ProblemType("app_tangent", "application", "接線の方程式", r"$y = f'(a)(x - a) + f(a)$", _build_tangent),
-    ProblemType("app_normal", "application", "法線の方程式", r"$y = -\frac{1}{f'(a)}(x - a) + f(a)$", _build_normal),
-    ProblemType("app_extremum", "application", "極大値・極小値", r"3次関数の極値", _build_extremum),
-    ProblemType("app_box", "application", "最大・最小（文章題）", r"箱の容積 $V(x)$ を作って最大値を求める", _build_box),
+    ProblemType("app_tangent", "application", "接線の方程式", r"$y = f'(a)(x - a) + f(a)$", _build_tangent, level=7),
+    ProblemType("app_normal", "application", "法線の方程式", r"$y = -\frac{1}{f'(a)}(x - a) + f(a)$", _build_normal, level=8),
+    ProblemType("app_extremum", "application", "極大値・極小値", r"3次関数の極値", _build_extremum, level=7),
+    ProblemType("app_box", "application", "最大・最小（文章題）", r"箱の容積 $V(x)$ を作って最大値を求める", _build_box, level=7),
 ]
