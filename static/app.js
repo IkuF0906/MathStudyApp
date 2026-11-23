@@ -408,6 +408,7 @@ function showDueBadge(rows) {
   $("due-badge").textContent = n;
   $("due-badge").hidden = n === 0;
   $("due-badge-label").textContent = n ? `（期限の来た型 ${n}）` : "";
+  $("menu-dot").hidden = n === 0;
 }
 
 async function refreshDueBadge() {
@@ -503,12 +504,20 @@ async function practiceType(unit, type) {
   switchTab("practice");
 }
 
+const TABS = ["placement", "vocab", "practice", "review", "stats"];
+// サイドメニューから開くページ（数学ドリル）。開いている間はメニューのボタンにページ名を出す
+const DRILL_PAGES = { practice: "練習", review: "復習", stats: "成績" };
+
 function switchTab(tab) {
-  document.querySelectorAll(".tab").forEach((b) => {
+  document.querySelectorAll("[data-tab]").forEach((b) => {
     b.classList.toggle("active", b.dataset.tab === tab);
     if (b.dataset.tab === tab) b.setAttribute("aria-current", "page");
     else b.removeAttribute("aria-current");
   });
+  $("menu-label").textContent = DRILL_PAGES[tab] ? `ドリル：${DRILL_PAGES[tab]}` : "メニュー";
+  $("menu-open").classList.toggle("active", tab in DRILL_PAGES);
+  // ページの URL に #practice などを付け、再読み込みやブックマークで同じページを開けるようにする
+  history.replaceState(null, "", tab === "placement" ? location.pathname : `#${tab}`);
   $("drill").hidden = tab === "stats" || tab === "vocab";
   $("stats").hidden = tab !== "stats";
   $("vocab").hidden = tab !== "vocab";
@@ -751,6 +760,21 @@ function hideMathMenu(mf) {
   mf.addEventListener("mount", apply, { once: true });
 }
 
+// サイドメニュー（左から出るダイアログ）。背景をクリックしても閉じる
+function setupMenu() {
+  const menu = $("menu");
+  $("menu-open").addEventListener("click", () => {
+    menu.showModal();
+    $("menu-open").setAttribute("aria-expanded", "true");
+  });
+  $("menu-close").addEventListener("click", () => menu.close());
+  menu.addEventListener("close", () => $("menu-open").setAttribute("aria-expanded", "false"));
+  menu.addEventListener("click", (e) => {
+    const r = menu.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) menu.close();
+  });
+}
+
 // 入力方法の一覧（ダイアログ）。背景をクリックしても閉じる
 function setupGuide() {
   const guide = $("guide");
@@ -766,7 +790,14 @@ function setupGuide() {
 }
 
 window.addEventListener("DOMContentLoaded", async () => {
-  document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => switchTab(b.dataset.tab)));
+  document.querySelectorAll("[data-tab]").forEach((b) =>
+    b.addEventListener("click", () => {
+      $("menu").close();
+      switchTab(b.dataset.tab);
+    }),
+  );
+  setupMenu();
+  $("home").addEventListener("click", () => switchTab("placement"));
   $("new-problem").addEventListener("click", newProblem);
   $("type-select").addEventListener("change", newProblem);
   $("next").addEventListener("click", newProblem);
@@ -803,6 +834,8 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
   await loadUnits();
   await loadTypes();
-  newProblem();
+  // トップは数学レベル診断。#practice などが付いていればそのページを開く
+  const hash = location.hash.slice(1);
+  switchTab(TABS.includes(hash) ? hash : "placement");
   refreshDueBadge();
 });

@@ -62,7 +62,7 @@ def take_mobile_screenshots(browser, out: Path, url: str, problems: list[str]) -
     ctx = browser.new_context(viewport={"width": 390, "height": 844}, device_scale_factor=2, is_mobile=True, has_touch=True)
     page = ctx.new_page()
     page.on("pageerror", lambda e: problems.append(f"スマホ JS エラー: {e}"))
-    page.goto(url)
+    page.goto(url + "#practice")
     page.select_option("#type-select", "power")
     page.wait_for_selector("#problem .katex", timeout=15000)
     page.wait_for_timeout(800)
@@ -90,10 +90,17 @@ def take_mobile_screenshots(browser, out: Path, url: str, problems: list[str]) -
     page.wait_for_timeout(500)
     page.screenshot(path=out / "11_mobile_result.png")
 
-    page.tap('.tab[data-tab="stats"]')
+    open_page(page, "stats", tap=True)
     page.wait_for_selector("#stats-units .unit-card")
     page.screenshot(path=out / "11_mobile_stats.png")
     ctx.close()
+
+
+def open_page(page, tab: str, tap: bool = False) -> None:
+    """数学ドリルのページ（練習・復習・成績）をサイドメニューから開く。"""
+    press = page.tap if tap else page.click
+    press("#menu-open")
+    press(f'.nav-item[data-tab="{tab}"]')
 
 
 def take_screenshots(out: Path, url: str) -> None:
@@ -105,7 +112,7 @@ def take_screenshots(out: Path, url: str) -> None:
         page.on("console", lambda m: m.type == "error" and problems.append(f"console: {m.text}"))
         page.on("response", lambda r: r.status >= 400 and problems.append(f"{r.status} {r.url}"))
 
-        page.goto(url)
+        page.goto(url + "#practice")
         page.select_option("#type-select", "power")
         page.wait_for_selector("#problem .katex", timeout=15000)
         page.wait_for_timeout(500)
@@ -145,7 +152,7 @@ def take_screenshots(out: Path, url: str) -> None:
         page.keyboard.press("Escape")
 
         # 単元ごとの問題（問題文・問題・解答欄の表示）
-        page.click('.tab[data-tab="practice"]')
+        open_page(page, "practice")
         units = page.eval_on_selector_all("#unit-chips .chip", "cs => cs.map(c => c.dataset.unit).filter(v => v)")
         for i, unit in enumerate(units, start=1):
             page.click(f'#unit-chips [data-unit="{unit}"]')
@@ -205,7 +212,7 @@ def take_screenshots(out: Path, url: str) -> None:
         page.wait_for_selector("#result:not([hidden])")
         page.screenshot(path=out / "8_integral_result.png", full_page=True)
 
-        page.click('.tab[data-tab="stats"]')
+        open_page(page, "stats")
         page.wait_for_selector("#stats-units .unit-card")
         page.screenshot(path=out / "6_stats.png", full_page=True)
 

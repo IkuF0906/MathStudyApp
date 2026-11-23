@@ -21,18 +21,38 @@
   <header class="topbar">
     <div class="topbar-inner">
       <div class="brand">
-        <span class="logo" aria-hidden="true">f′</span>
-        <h1>学力診断テスト</h1>
+        <button type="button" class="menu-button" id="menu-open" aria-controls="menu" aria-expanded="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg>
+          <span id="menu-label">メニュー</span>
+          <span class="menu-dot" id="menu-dot" hidden></span>
+        </button>
+        <button type="button" class="home" id="home" title="トップ（数学レベル診断）へ">
+          <span class="logo" aria-hidden="true">f′</span>
+          <h1>学力診断テスト</h1>
+        </button>
       </div>
-      <nav class="tabs" aria-label="画面の切り替え">
-        <button class="tab active" data-tab="practice" aria-current="page">練習</button>
-        <button class="tab" data-tab="review">復習<span class="badge" id="due-badge" aria-hidden="true" hidden></span><span class="visually-hidden" id="due-badge-label"></span></button>
-        <button class="tab" data-tab="placement"><span><span class="tab-long">レベル</span>診断</span></button>
-        <button class="tab" data-tab="vocab">語彙</button>
-        <button class="tab" data-tab="stats">成績</button>
+      <nav class="tabs" aria-label="診断テスト">
+        <button class="tab active" data-tab="placement" aria-current="page">数学レベル診断</button>
+        <button class="tab" data-tab="vocab">語彙力チェック</button>
       </nav>
     </div>
   </header>
+
+  <dialog id="menu" class="drawer" aria-labelledby="menu-title">
+    <div class="dialog-head">
+      <h2 id="menu-title">メニュー</h2>
+      <button id="menu-close" type="button" aria-label="メニューを閉じる">×</button>
+    </div>
+    <nav aria-label="すべてのページ">
+      <p class="drawer-group">診断テスト</p>
+      <button type="button" class="nav-item" data-tab="placement">数学レベル診断<small>20問で到達レベル（数I・A〜数III）を推定</small></button>
+      <button type="button" class="nav-item" data-tab="vocab">語彙力チェック<small>日本語・English の語彙数を推定</small></button>
+      <p class="drawer-group">数学ドリル</p>
+      <button type="button" class="nav-item" data-tab="practice">練習<small>単元と問題の型を選んで解く</small></button>
+      <button type="button" class="nav-item" data-tab="review"><span class="nav-title">復習<span class="badge" id="due-badge" aria-hidden="true" hidden></span><span class="visually-hidden" id="due-badge-label"></span></span><small>期限が来た型・苦手な型を解く</small></button>
+      <button type="button" class="nav-item" data-tab="stats">成績<small>正答率・習熟・多い間違い</small></button>
+    </nav>
+  </dialog>
 
   <main>
     <section id="drill">
