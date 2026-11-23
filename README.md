@@ -1,6 +1,6 @@
 # 学力診断テスト — 数学ドリル（類題自動生成＋誤答パターン診断）・レベル診断・語彙力チェック
 
-[![ci](https://github.com/IkuF0906/kip-2026/actions/workflows/ci.yml/badge.svg)](https://github.com/IkuF0906/kip-2026/actions/workflows/ci.yml)
+[![ci](https://github.com/IkuF0906/MathStudyApp/actions/workflows/ci.yml/badge.svg)](https://github.com/IkuF0906/MathStudyApp/actions/workflows/ci.yml)
 
 微分・積分・極限に加えて数列・場合の数と確率の練習問題を自動で作り、間違えたときに「なぜ間違えたか」を指摘する Web アプリです。
 AI・LLM の API は使わず、数式処理（SymPy）とルールだけで動きます。

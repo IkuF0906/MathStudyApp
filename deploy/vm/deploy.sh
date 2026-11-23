@@ -12,7 +12,8 @@ esac
 
 # GitHub ではフォークのコミットも元のリポジトリの URL で取得できてしまう。
 # 他人が書いた compose.prod.yaml で動かされないよう、main に含まれるコミットだけを受け付ける
-body=$(curl -fsS "https://api.github.com/repos/IkuF0906/kip-2026/compare/$sha...main") || {
+# リポジトリ名を変えると古い URL はリダイレクト（301）になり、-L がないと中身のない応答を読んでしまう
+body=$(curl -fsSL "https://api.github.com/repos/IkuF0906/MathStudyApp/compare/$sha...main") || {
   echo "main に含まれるコミットか確かめられませんでした" >&2
   exit 3
 }
@@ -25,7 +26,7 @@ esac
 
 cd /opt/drill
 # 構成はそのコミットの deploy/compose.prod.yaml を使う（リポジトリは公開なので認証は要らない）
-curl -fsSL "https://raw.githubusercontent.com/IkuF0906/kip-2026/$sha/deploy/compose.prod.yaml" -o compose.yaml.new
+curl -fsSL "https://raw.githubusercontent.com/IkuF0906/MathStudyApp/$sha/deploy/compose.prod.yaml" -o compose.yaml.new
 mv compose.yaml.new compose.yaml
 echo "IMAGE_TAG=$sha" > .env
 
