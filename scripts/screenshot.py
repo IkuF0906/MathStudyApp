@@ -133,6 +133,8 @@ def take_screenshots(out: Path, url: str) -> None:
 
         # 数学のレベル診断: 答えたら正誤を出さずに次の問題へ進むこと
         page.click('.tab[data-tab="placement"]')
+        page.wait_for_selector("#placement-intro:not([hidden])")
+        page.screenshot(path=out / "0_placement_intro.png")
         page.click("#placement-start")
         page.wait_for_selector("#problem-card:not([hidden])")
         page.wait_for_selector("#placement-count:has-text('1 / 20')")

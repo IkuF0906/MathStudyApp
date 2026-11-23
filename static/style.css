@@ -216,7 +216,8 @@ main { max-width: 1320px; margin: 0 auto; padding: 20px 24px 48px; }
 
 /* --- トップ（3つの診断の入口） --- */
 
-#home-page { max-width: 880px; }
+/* 1列だけのページ（トップ・診断の説明・語彙チェック）は、画面の中央に置く */
+#home-page { max-width: 880px; margin: 0 auto; }
 #home-page h2 { margin: 4px 0 8px; font-size: 1.3rem; font-weight: 500; }
 .test-list { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
 .test-list li + li { border-top: 1px solid var(--border-soft); }
@@ -582,7 +583,7 @@ code { font-family: ui-monospace, Consolas, monospace; background: var(--bg); pa
 
 /* --- レベル診断 --- */
 
-.placement-intro { padding: 22px 26px; max-width: 720px; }
+.placement-intro { padding: 22px 26px; max-width: 720px; margin: 0 auto; }
 .placement-intro h2 { margin: 0 0 8px; font-size: 1.3rem; font-weight: 500; }
 .placement-intro p { margin: 0 0 12px; }
 #placement-start, #placement-again { height: 48px; padding: 0 28px; }
@@ -608,12 +609,13 @@ code { font-family: ui-monospace, Consolas, monospace; background: var(--bg); pa
 
 /* --- 語彙力チェック --- */
 
-.vocab-head { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; max-width: 720px; }
+#vocab { max-width: 720px; margin: 0 auto; }
+.vocab-head { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; }
 .vocab-head h2 { margin: 0 0 4px; font-size: 1.3rem; font-weight: 500; }
-.vocab-head .hint { max-width: 34em; margin-bottom: 12px; }
-.vocab-card { padding: 22px 26px; max-width: 720px; }
+.vocab-head .hint { margin-bottom: 12px; }
+.vocab-card { padding: 22px 26px; }
 .vocab-card h3 { margin: 20px 0 10px; font-size: 1rem; font-weight: 500; }
-.vocab-note { max-width: 720px; margin-top: 12px; font-size: 0.8rem; }
+.vocab-note { margin-top: 12px; font-size: 0.8rem; }
 .vocab-start { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 .vocab-start p { margin: 0; }
 #vocab-begin { height: 48px; padding: 0 28px; }
