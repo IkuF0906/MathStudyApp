@@ -538,13 +538,46 @@ code { font-family: ui-monospace, Consolas, monospace; background: var(--bg); pa
 .placement-actions button { height: 48px; padding: 0 22px; }
 @media (prefers-reduced-motion: reduce) { #placement-bar { transition: none; } }
 
+/* --- 語彙力チェック --- */
+
+.vocab-head { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; max-width: 720px; }
+.vocab-head h2 { margin: 0 0 4px; font-size: 1.3rem; font-weight: 500; }
+.vocab-head .hint { max-width: 34em; margin-bottom: 12px; }
+.vocab-card { padding: 22px 26px; max-width: 720px; }
+.vocab-card h3 { margin: 20px 0 10px; font-size: 1rem; font-weight: 500; }
+.vocab-note { max-width: 720px; margin-top: 12px; font-size: 0.8rem; }
+.vocab-start { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.vocab-start p { margin: 0; }
+#vocab-begin { height: 48px; padding: 0 28px; }
+.vocab-prog { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.vocab-word { font-size: clamp(2.2rem, 8vw, 3.2rem); font-weight: 500; text-align: center; margin: 18px 0 4px; line-height: 1.2; overflow-wrap: anywhere; }
+.vocab-en { font-family: Georgia, "Times New Roman", serif; }
+.vocab-q { text-align: center; color: var(--muted); font-size: 0.9rem; margin: 0 0 14px; }
+.vocab-opts { display: grid; gap: 8px; }
+.vocab-opt { display: flex; align-items: center; gap: 12px; text-align: left; min-height: 52px; padding: 8px 14px; border-radius: 12px; background: var(--surface-2); }
+@media (hover: hover) { .vocab-opt:not(:disabled):hover { border-color: var(--accent); } }
+.vocab-opt:disabled { cursor: default; color: var(--text); }
+.vocab-opt.ok { border-color: var(--ok); background: var(--accent-tint); color: var(--ok-ink); font-weight: 500; }
+.vocab-opt.ng { border-color: var(--ng); color: var(--ng-ink); }
+.vocab-key { flex: none; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--border); font-size: 0.75rem; color: var(--muted); background: var(--surface); }
+.vocab-idk { width: 100%; margin-top: 10px; min-height: 46px; border-style: dashed; background: none; color: var(--muted); }
+.vocab-idk .vocab-key { width: 20px; height: 20px; margin-left: 6px; }
+.vocab-count { margin: 2px 0; font-size: 2.6rem; font-weight: 500; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.vocab-count small { font-size: 1rem; margin-left: 6px; }
+.vocab-review { list-style: none; margin: 0 0 16px; padding: 0; border-top: 1px solid var(--border-soft); }
+.vocab-review li { display: grid; grid-template-columns: 8em minmax(0, 1fr) 3em; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border-soft); align-items: baseline; font-size: 0.9rem; }
+.vocab-review b { font-weight: 500; font-size: 1.05rem; overflow-wrap: anywhere; }
+.vocab-review i { font-style: normal; color: var(--muted); font-size: 0.8rem; text-align: right; }
+
 /* スマホ（幅 600px まで）: 余白を詰め、ノートはボタンで開いたときだけ出す */
 @media (max-width: 600px) {
-  .topbar-inner { padding: 10px 12px; flex-wrap: nowrap; }
+  /* タブが5つあるので、アプリ名の下の行に全幅で並べる */
+  .topbar-inner { padding: 10px 12px; gap: 8px; }
+  .tabs { flex: 1 1 100%; }
   .logo { width: 30px; height: 30px; font-size: 17px; border-radius: 8px; }
   h1 { font-size: 1.05rem; white-space: nowrap; }
   .tabs { padding: 3px; gap: 2px; }
-  .tab { padding: 6px 10px; font-size: 0.85rem; gap: 4px; }
+  .tab { flex: 1; justify-content: center; padding: 6px 4px; font-size: 0.85rem; gap: 4px; white-space: nowrap; }
   .badge { min-width: 18px; height: 18px; font-size: 0.7rem; padding: 0 5px; }
   main { padding: 10px 12px 32px; }
   .toolbar { gap: 8px; margin-bottom: 10px; }
@@ -574,6 +607,8 @@ code { font-family: ui-monospace, Consolas, monospace; background: var(--bg); pa
   .tile-value { font-size: 1.8rem; }
   .unit-grid { grid-template-columns: minmax(0, 1fr); }
   .tab-long { display: none; }
+  .vocab-card { padding: 16px; }
+  .vocab-review li { grid-template-columns: 6em minmax(0, 1fr) 2.6em; }
   .placement-intro { padding: 16px; }
   .placement-label { font-size: 1.6rem; }
   .level-row { grid-template-columns: 2.6em 6.5em minmax(0, 1fr) 2.8em; }

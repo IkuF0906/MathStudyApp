@@ -35,7 +35,7 @@ def answer(client, problem_id, text):
 def test_index_is_served(client):
     res = client.get("/")
     assert res.status_code == 200
-    assert "数学ドリル" in res.text
+    assert "学力診断テスト" in res.text
 
 
 def test_problem_for_type(client):
@@ -294,3 +294,10 @@ def test_placement_parse_error_keeps_problem(client):
     sid, pid = start["session_id"], start["problem"]["problem_id"]
     assert placement_answer(client, sid, pid, "(x+").status_code == 400
     assert placement_answer(client, sid, pid, skip=True).status_code == 200
+
+
+def test_vocab_tab_is_served(client):
+    assert 'data-tab="vocab"' in client.get("/").text
+    js = client.get("/vocab.js")
+    assert js.status_code == 200
+    assert "showVocab" in js.text and "語彙" in js.text

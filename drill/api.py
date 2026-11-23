@@ -94,7 +94,7 @@ def create_app(
     """now は現在時刻を返す関数（テストで時刻を固定するため差し替え可能）。
     adopt_local が真なら、Cookie のない利用者を LOCAL_USER とする。
     sandbox は答え合わせを動かすワーカー（省略すると環境変数の設定で作る）。"""
-    app = FastAPI(title="数学ドリル")
+    app = FastAPI(title="学力診断テスト")
     store = Store(db_path)
     sandbox = sandbox or from_env()
 

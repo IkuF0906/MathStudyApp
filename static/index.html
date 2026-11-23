@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>数学ドリル</title>
+  <title>学力診断テスト</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%238ccdd9%22/%3E%3Ctext x=%2216%22 y=%2223%22 font-size=%2218%22 text-anchor=%22middle%22 fill=%22%232a3138%22 font-family=%22serif%22 font-style=%22italic%22%3Ef%E2%80%B2%3C/text%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,18 +15,20 @@
   <link rel="stylesheet" href="style.css">
   <script defer src="app.js"></script>
   <script defer src="note.js"></script>
+  <script defer src="vocab.js"></script>
 </head>
 <body>
   <header class="topbar">
     <div class="topbar-inner">
       <div class="brand">
         <span class="logo" aria-hidden="true">f′</span>
-        <h1>数学ドリル</h1>
+        <h1>学力診断テスト</h1>
       </div>
       <nav class="tabs" aria-label="画面の切り替え">
         <button class="tab active" data-tab="practice" aria-current="page">練習</button>
         <button class="tab" data-tab="review">復習<span class="badge" id="due-badge" aria-hidden="true" hidden></span><span class="visually-hidden" id="due-badge-label"></span></button>
         <button class="tab" data-tab="placement"><span><span class="tab-long">レベル</span>診断</span></button>
+        <button class="tab" data-tab="vocab">語彙</button>
         <button class="tab" data-tab="stats">成績</button>
       </nav>
     </div>
@@ -188,6 +190,21 @@
         <button type="button" id="placement-again" class="primary">もう一度診断する</button>
         <button type="button" id="placement-review">間違えた型を復習する</button>
       </div>
+    </section>
+
+    <section id="vocab" hidden aria-labelledby="vocab-title">
+      <div class="vocab-head">
+        <div>
+          <h2 id="vocab-title">語彙力チェック</h2>
+          <p class="hint">単語の意味を4つの中から選んでください。全20問で、正解すると難しい語、間違えると易しい語が出ます。知らない語は「わからない」を押すと推定が正確になります。</p>
+        </div>
+        <div class="segmented" role="group" aria-label="言語">
+          <button type="button" class="vocab-lang active" data-lang="ja" aria-pressed="true">日本語</button>
+          <button type="button" class="vocab-lang" data-lang="en" aria-pressed="false">English</button>
+        </div>
+      </div>
+      <div class="pane vocab-card" id="vocab-card" aria-live="polite"></div>
+      <p class="hint vocab-note" id="vocab-note"></p>
     </section>
 
     <section id="stats" hidden aria-labelledby="stats-title">

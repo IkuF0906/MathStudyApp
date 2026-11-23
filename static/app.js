@@ -509,11 +509,16 @@ function switchTab(tab) {
     if (b.dataset.tab === tab) b.setAttribute("aria-current", "page");
     else b.removeAttribute("aria-current");
   });
-  $("drill").hidden = tab === "stats";
+  $("drill").hidden = tab === "stats" || tab === "vocab";
   $("stats").hidden = tab !== "stats";
+  $("vocab").hidden = tab !== "vocab";
   $("placement-result").hidden = true;
   if (tab === "stats") {
     loadStats();
+    return;
+  }
+  if (tab === "vocab") {
+    window.showVocab();
     return;
   }
   mode = tab;

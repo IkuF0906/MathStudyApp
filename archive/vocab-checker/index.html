@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>語彙数チェッカー</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: 落ち着いた辞書の索引。静かで正確。
+   IDEA: 辞書の見出し語カード。一語ずつ出題し、意味を選ぶ。
+   PICTURE: 大きな見出し語と4つの選択肢のカード（操作するものそのもの）。
+   COLOUR and TYPE: 白い紙・墨・朱。見出し語は明朝、UIはゴシック。
+   LAYOUT: 細いタイトル → タブ → 問題カード（進捗つき） → 結果と復習リスト。 */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#131211);--ink:light-dark(#1b1a19,#ecebe8);--sub:light-dark(#6b6762,#a29d97);--line:light-dark(#e3e0dc,#2c2a28);--card:light-dark(#faf9f7,#1c1b1a);--shu:light-dark(#c8321f,#ff6b55);--shu-bg:light-dark(#fbe9e6,#3a1d18);--ok:light-dark(#1f6f4a,#5fd39a);--ok-bg:light-dark(#e5f3ec,#173226)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "Zen Kaku Gothic New",system-ui,sans-serif;overflow-x:clip}
+.wrap{max-width:640px;margin:0 auto;padding:clamp(20px,4vw,40px) max(4vw,16px) 60px}
+h1{font:700 clamp(26px,4.4vw,36px)/1.1 "Shippori Mincho",serif;margin:0 0 6px;text-wrap:balance}
+.lead{color:var(--sub);margin:0 0 18px;font-size:15px}
+.tabs{display:flex;gap:8px;margin-bottom:18px}
+button{font:inherit;color:var(--ink);cursor:pointer}
+.tabs button,.btn{min-height:44px;padding:0 18px;border-radius:999px;border:1px solid var(--line);background:transparent}
+.tabs button[aria-selected=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button:focus-visible{outline:3px solid var(--shu);outline-offset:2px}
+.card{border:1px solid var(--line);background:var(--card);border-radius:16px;padding:clamp(18px,4vw,30px)}
+.prog{display:flex;justify-content:space-between;font-size:14px;color:var(--sub);font-variant-numeric:tabular-nums}
+.pbar{height:6px;background:var(--line);border-radius:3px;margin:6px 0 22px;overflow:hidden}
+.pbar i{display:block;height:100%;background:var(--shu);transition:width .2s}
+.word{font:700 clamp(40px,9vw,60px)/1.1 "Shippori Mincho",serif;text-align:center;margin:8px 0 26px;overflow-wrap:anywhere}
+.en .word{font-size:clamp(32px,7vw,46px)}
+.q{font-size:14px;color:var(--sub);text-align:center;margin-bottom:12px}
+.opts{display:grid;gap:8px}
+.opt{text-align:left;min-height:52px;padding:10px 16px;border:1px solid var(--line);background:var(--bg);border-radius:10px;font-size:16px}
+.opt:hover{border-color:var(--ink)}
+.opt.ok{border-color:var(--ok);background:var(--ok-bg);color:var(--ok);font-weight:700}
+.opt.ng{border-color:var(--shu);background:var(--shu-bg);color:var(--shu)}
+.idk{margin-top:12px;width:100%;min-height:46px;border:1px dashed var(--sub);background:transparent;border-radius:10px;color:var(--sub)}
+.start{text-align:center}
+.start p{margin:0 0 18px}
+.go{background:var(--shu);border-color:var(--shu);color:#fff;font-weight:700;min-width:12em}
+.big{font:700 clamp(44px,10vw,72px)/1 "Shippori Mincho",serif;color:var(--shu);white-space:nowrap;margin:6px 0 4px}
+.big small{font-size:.36em;color:var(--ink);margin-left:6px}
+.lvl{font-size:17px;margin:6px 0 0}
+.lvl b{font-size:20px}
+.rows{margin-top:22px;display:grid;gap:8px}
+.row{display:grid;grid-template-columns:2.6em 10em minmax(0,1fr) 3em;gap:10px;align-items:center;font-size:14px}
+.row .t{height:12px;background:var(--line);border-radius:6px;overflow:hidden}
+.row .f{height:100%;background:var(--shu);border-radius:6px}
+.row .n{text-align:right;color:var(--sub);font-variant-numeric:tabular-nums;white-space:nowrap}
+.row .lv{font-weight:700;font-variant-numeric:tabular-nums}
+.row .lb{color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+h2{font:700 20px/1.3 "Shippori Mincho",serif;margin:30px 0 10px}
+.rev{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.rev li{display:grid;grid-template-columns:9em minmax(0,1fr) 3.2em;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:15px;align-items:baseline}
+.rev b{font-family:"Shippori Mincho",serif;font-size:18px;overflow-wrap:anywhere}
+.rev i{font-style:normal;color:var(--sub);font-size:13px;text-align:right;white-space:nowrap}
+.acts{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+.note{font-size:13px;color:var(--sub);margin-top:22px}
+.mtag{display:inline-block;font-size:12px;color:var(--sub);border:1px solid var(--line);border-radius:999px;padding:1px 10px;margin-bottom:10px}
+.mp{margin:0 0 12px;overflow-wrap:anywhere}
+.mq{font-size:20px;text-align:center;margin:6px 0 14px;overflow-x:auto;overflow-y:hidden;padding:4px 0}
+.mpre{font-size:14px;color:var(--sub);text-align:center;margin-bottom:12px}
+.math .opt{font-size:18px;overflow-x:auto}
+math{font-family:"STIX Two Math","Cambria Math","Latin Modern Math",math}
+.fb{margin-top:14px;border:1px solid var(--line);border-radius:10px;padding:12px 16px;background:var(--bg);font-size:15px}
+.fb .h{font-weight:700;color:var(--shu)}
+.fb p{margin:4px 0 0}
+.fb .next{margin-top:12px}
+.bigl{font:700 clamp(30px,7vw,46px)/1.15 "Shippori Mincho",serif;color:var(--shu);margin:6px 0 4px;text-wrap:balance}
+.mc{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.math .rev li{grid-template-columns:minmax(0,1fr) 7.5em 3.2em}
+.math .rev b{font:700 15px/1.4 "Zen Kaku Gothic New",system-ui,sans-serif}
+.math .rev span{color:var(--sub);font-size:13px}
+.mc li{padding:10px 0;border-bottom:1px solid var(--line);font-size:15px}
+.mc b{display:block}
+.mc span{color:var(--sub);font-size:14px}
+@media(max-width:600px){.row{grid-template-columns:2.4em 6.5em minmax(0,1fr) 2.8em}.rev li{grid-template-columns:6.5em minmax(0,1fr) 3em}}
+@media(prefers-reduced-motion:reduce){.pbar i{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 id="ttl">あなたの語彙数は？</h1>
+  <p class="lead" id="lead">単語の意味を4つの中から選んでください。全20問で、正解すると難しい語、間違えると易しい語が出ます。知らない語は「わからない」を押すと推定が正確になります。</p>
+  <div class="tabs" role="tablist">
+    <button role="tab" id="t-ja" aria-selected="true">日本語</button>
+    <button role="tab" id="t-en" aria-selected="false">English</button>
+    <button role="tab" id="t-math" aria-selected="false">数学</button>
+  </div>
+  <div class="card" id="card" aria-live="polite"></div>
+  <p class="note" id="foot">簡易版の自作テストです。レベルは単語に含まれる漢字の漢検級（英語は頻度順位の目安）をもとに作者が振り分けたもので、公式の配当表や統計で検証したものではありません。推定語彙数は目安としてご覧ください。</p>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script>
+{
+const N=20;
+/* [語, 意味, レベル, 品詞] / levels: {名前, その段階に属する語のおおよその数} */
+const T={
+ ja:{name:"日本語",unit:"語",q:"この語の意味は？",start:4,
+  levels:[null,
+   ["漢検10級（小1）",2000],["漢検9級（小2）",3000],["漢検8級（小3）",4000],["漢検7級（小4）",5000],
+   ["漢検6〜5級（小5・6）",8000],["漢検4級（中学）",10000],["漢検3級（中学）",12000],["漢検準2級（高校）",15000],
+   ["漢検2級（常用漢字）",18000],["漢検準1〜1級",25000],["1級を超える難語",30000]],
+  w:[
+   ["学校","児童や生徒が学ぶ施設",1],["天気","その日の空模様",1],["花火","火薬を燃やして光や音を楽しむもの",1],["森林","木がたくさん生えている広い土地",1],["早口","話し方が速いこと",1],
+   ["青空","晴れわたった青い空",1],["名人","技芸に特に優れた人",1],["足音","歩くときに立つ音",1],["夕日","夕方の太陽",1],["休日","仕事や学校が休みの日",1],
+   ["雨音","雨が降る音",1],["火山","地下のマグマが噴き出してできた山",1],["入口","中へ入る所",1],["出口","外へ出る所",1],["年中","一年じゅう・いつも",1],["大木","大きな木",1],["水田","水を張って稲を育てる田",1],["本気","真剣な気持ち",1],["草花","花の咲く草",1],["目上","自分より地位や年齢が上の人",1],
+   ["電話","離れた人と声で話すための機器",2],["計算","数を足したり引いたりして答えを出すこと",2],["地図","土地の様子を縮めて描いた図",2],["親友","特に親しい友人",2],["合図","身振りや音で相手に知らせること",2],
+   ["晴天","よく晴れた空",2],["会話","互いに話をすること",2],["帰国","自分の国へ帰ること",2],["名作","すぐれた作品",2],["強弱","強いことと弱いこと",2],
+   ["公園","人々が憩うために作られた広場",2],["遠足","学校で行く日帰りの小旅行",2],["交通","人や車が行き来すること",2],["新聞","ニュースを伝える定期的な印刷物",2],["図書室","本を集めて読めるようにした部屋",2],["同時","同じ時",2],["理科","自然について学ぶ教科",2],["毎朝","毎日の朝",2],["外国","自分の国以外の国",2],["近道","目的地に早く着ける道",2],
+   ["宿題","家でするよう出された課題",3],["予定","前もって決めておく事柄",3],["返事","呼びかけや手紙に答えること",3],["研究","物事を深く調べて考えること",3],["勝負","勝ち負けを争うこと",3],
+   ["温度","あたたかさや冷たさの度合い",3],["旅行","よその土地へ出かけること",3],["練習","上達するためにくり返し習うこと",3],["期待","よい結果を待ち望むこと",3],["安心","心配がなく落ち着いていること",3],
+   ["世界","地球上のすべての国や地域",3],["自由","他から縛られず思うままにできること",3],["写真","カメラで写した像",3],["薬局","薬を調合して売る店",3],["平和","争いがなく穏やかなこと",3],["運動","体を動かすこと",3],["感動","深く心を動かされること",3],["相談","意見を聞くために話し合うこと",3],["発表","多くの人に知らせること",3],["集中","一つのことに心を注ぐこと",3],
+   ["約束","相手と前もって取り決めること",4],["協力","力を合わせること",4],["節約","無駄を省いて切り詰めること",4],["失敗","うまくいかないこと",4],["必要","なくてはならないこと",4],
+   ["改良","悪い所を直してよりよくすること",4],["観察","物事をよく注意して見ること",4],["希望","こうなってほしいと望むこと",4],["不満","満ち足りず不平に思うこと",4],["競争","互いに勝とうと争うこと",4],
+   ["完成","すっかり出来上がること",4],["記録","後に残すために書きとめること",4],["結果","ある原因から生じた結末",4],["健康","体や心が元気なこと",4],["説明","よくわかるように述べること",4],["目標","目指すところ",4],["参加","仲間に加わること",4],["卒業","学校の課程を終えること",4],["変化","形や性質が変わること",4],["便利","役に立って都合がよいこと",4],
+   ["判断","物事のよしあしを考えて決めること",5],["往復","行って帰ってくること",5],["尊敬","人をうやまうこと",5],["批評","よしあしを論じること",5],["貯金","お金をためること",5],
+   ["誤解","まちがって理解すること",5],["検討","よく調べて考えること",5],["演奏","楽器を鳴らして音楽を表すこと",5],["責任","引き受けなければならない務め",5],["創造","新しいものを初めて作り出すこと",5],
+   ["解決","問題などをうまく片付けること",5],["経験","実際に見聞きしたりやってみたりすること",5],["提案","考えを出すこと",5],["資格","ある身分や地位を得るための条件",5],["複雑","入り組んでいてわかりにくいこと",5],["簡単","たやすいこと",5],["拡大","広げて大きくすること",5],["秘密","人に知られないように隠すこと",5],["認識","物事をはっきり理解すること",5],["誕生","生まれること",5],
+   ["範囲","ある限られた広がり",6],["恐怖","おそろしいと感じること",6],["敏感","わずかな変化にもすぐ反応すること",6],["普及","広く行き渡ること",6],["抵抗","外からの力に逆らうこと",6],
+   ["継続","前から続けてきたことを続けること",6],["透明","すきとおっていること",6],["警戒","危険に備えて用心すること",6],["遅刻","決まった時刻に遅れること",6],["鋭利","刃物などがよく切れること",6],
+   ["依頼","頼むこと",6],["距離","二点の間の隔たり",6],["援助","困っている人を助けること",6],["獲得","努力して手に入れること",6],["被害","損害を受けること",6],["回避","避けること",6],["微妙","細かくて言い表しにくいさま",6],["繁栄","栄えること",6],["搬送","運び送ること",6],["脱退","組織から抜けること",6],
+   ["契約","取り決めを結ぶこと",7],["緩和","厳しさなどをゆるめること",7],["削除","文字や項目を取り除くこと",7],["催促","早くするよう求めること",7],["掲示","貼り出して人々に知らせること",7],
+   ["遵守","規則や法律に従って守ること",7],["隔離","他から引き離して別にすること",7],["携帯","身につけて持ち歩くこと",7],["抑制","勢いをおさえとどめること",7],["撮影","写真や映像をとること",7],
+   ["概要","あらまし",7],["該当","条件にあてはまること",7],["穏便","おだやかに事を済ますさま",7],["緊張","心や体がこわばること",7],["錯覚","実際と違って感じること",7],["審査","調べて優劣などを決めること",7],["摂取","栄養などを取り入れること",7],["措置","取り計らって始末をつけること",7],["怠慢","なまけて務めを果たさないこと",7],["鍛錬","心身をきたえること",7],
+   ["妥協","互いに譲り合って折り合うこと",8],["懸念","気にかかって不安に思うこと",8],["示唆","それとなく示すこと",8],["把握","しっかり理解すること",8],["推薦","よいと思う人や物を他に勧めること",8],
+   ["寛容","心が広く人を受け入れること",8],["偽装","他のものに見せかけること",8],["拒否","要求などを断ること",8],["頑固","意地を張って考えを変えないこと",8],["撤退","陣地などから退くこと",8],
+   ["購入","買い入れること",8],["謙虚","ひかえめで素直なこと",8],["窮屈","自由がなく気づまりなこと",8],["循環","ひと回りして元に戻ることをくり返すこと",8],["詐欺","だまして金品を奪うこと",8],["徹底","中途半端でなく貫き通すこと",8],["迅速","非常に速いこと",8],["慶事","めでたい事",8],["惰性","これまでの習慣や勢い",8],["懇談","打ち解けて話し合うこと",8],
+   ["曖昧","はっきりしないこと",9],["払拭","疑いや不安をすっかり取り除くこと",9],["謙遜","へりくだって控えめにふるまうこと",9],["恣意","自分の思うままで勝手なこと",9],["真摯","まじめで熱心なこと",9],
+   ["語彙","ある言語で使われる単語の総体",9],["進捗","物事のはかどり具合",9],["完璧","欠点がまったくないこと",9],["嫉妬","うらやみねたむこと",9],["遡及","過去にさかのぼって効力を及ぼすこと",9],
+   ["憧憬","あこがれること",9],["軽蔑","見下してばかにすること",9],["比喩","物事を他のものにたとえること",9],["滑稽","おどけていておかしいこと",9],["臆病","ちょっとしたことにも怖がること",9],["苛烈","きびしく激しいこと",9],["隠蔽","隠してふさぐこと",9],["洞窟","岩などにできた奥深い穴",9],["貪欲","欲が深いこと",9],["傲慢","おごりたかぶること",9],
+   ["杞憂","あれこれと無用な心配をすること",10],["忖度","他人の気持ちを推し量ること",10],["揶揄","からかうこと",10],["齟齬","物事がうまくかみ合わないこと",10],["逡巡","決断できずにためらうこと",10],
+   ["僥倖","思いがけない幸運",10],["蒐集","趣味などで物を集めること",10],["凋落","衰えて落ちぶれること",10],["贔屓","気に入った人を特に引き立てること",10],["辟易","うんざりすること",10],
+   ["蘊蓄","深く蓄えた知識",10],["憔悴","心配や疲れでやつれること",10],["邂逅","思いがけなくめぐり会うこと",10],["吝嗇","ひどくけちなこと",10],["矜持","自分の能力を信じて抱く誇り",10],["欺瞞","あざむきだますこと",10],["婉曲","遠回しに言うこと",10],["渾身","体全体・全力",10],["嗜好","好み",10],["慟哭","声をあげて激しく泣くこと",10],
+   ["嚆矢","物事の始まり",11],["蹉跌","つまずき・失敗",11],["掣肘","わきから干渉して自由を妨げること",11],["慫慂","そばから誘いかけて勧めること",11],["韜晦","自分の本心や才能を隠すこと",11],
+   ["狷介","頑固で人と協調しないこと",11],["蹌踉","足どりがよろめくさま",11],["擯斥","退けて排除すること",11],["衒学","学識をひけらかすこと",11],["畢竟","つまるところ",11],
+   ["佶屈","文章が堅苦しくわかりにくいこと",11],["鞅掌","忙しく働くこと",11],["跼蹐","おそれて身をちぢめること",11],["蟄伏","虫などが冬ごもりすること",11],["囹圄","牢屋",11],["讒謗","悪口を言ってそしること",11],["頡頏","互いに張り合って優劣がないこと",11],["黽勉","つとめ励むこと",11],["鬩牆","兄弟や身内どうしの争い",11],["擘画","計画を立てること",11]]},
+ math:{name:"数学",q:"",start:7,
+  levels:[null,["中学1年"],["中学2年"],["中学3年"],["数I（前半）"],["数I（後半）"],["数I・A"],["数II・B"],["数B〜数III入口"],["数III"],["大学教養"]],
+  w:null,mc:null},
+ en:{name:"English",unit:"語（ワードファミリー）",q:"この単語の意味は？",start:3,
+  levels:[null,
+   ["中学基礎（〜1,000語）",1000],["英検3級（〜2,000）",1000],["英検準2級（〜3,000）",1000],["英検2級（〜5,000）",2000],
+   ["英検準1級（〜7,000）",2000],["準1級上位（〜9,000）",2000],["英検1級（〜12,000）",3000],["1級上位（〜15,000）",3000],
+   ["ネイティブ上級（〜20,000）",5000],["超難語（20,000〜）",10000]],
+  w:[
+   ["house","家",1,"n"],["morning","朝",1,"n"],["happy","うれしい",1,"a"],["buy","買う",1,"v"],["remember","覚えている",1,"v"],
+   ["borrow","借りる",2,"v"],["journey","旅",2,"n"],["polite","礼儀正しい",2,"a"],["crowd","群衆",2,"n"],["ancient","古代の",2,"a"],["salary","給料",2,"n"],
+   ["reluctant","気が進まない",3,"a"],["stumble","つまずく",3,"v"],["fragile","壊れやすい",3,"a"],["glimpse","ちらりと見ること",3,"n"],["wander","さまよう",3,"v"],
+   ["vague","あいまいな",4,"a"],["thrive","繁栄する",4,"v"],["tedious","退屈な",4,"a"],["plight","苦境",4,"n"],["ominous","不吉な",4,"a"],
+   ["frantic","半狂乱の",5,"a"],["coax","なだめすかして〜させる",5,"v"],["brittle","もろい",5,"a"],["lament","嘆き悲しむ",5,"v"],["scrutiny","綿密な調査",5,"n"],
+   ["meticulous","細心の注意を払う",6,"a"],["frugal","倹約的な",6,"a"],["linger","なかなか去らずに残る",6,"v"],["nimble","身軽な",6,"a"],["galvanize","奮い立たせる",6,"v"],
+   ["ubiquitous","至る所にある",7,"a"],["placate","（怒っている人を）なだめる",7,"v"],["quell","（反乱などを）鎮圧する",7,"v"],["laconic","言葉数の少ない",7,"a"],["rancor","深い恨み",7,"n"],
+   ["cajole","おだてて〜させる",8,"v"],["perfunctory","おざなりの",8,"a"],["sanguine","楽観的な",8,"a"],["insipid","味気ない",8,"a"],["obsequious","こびへつらう",8,"a"],
+   ["truculent","喧嘩腰の",9,"a"],["lugubrious","陰気な",9,"a"],["recalcitrant","反抗的な",9,"a"],["pellucid","澄みきった",9,"a"],["lachrymose","涙もろい",9,"a"],
+   ["crepuscular","薄明の",10,"a"],["susurrus","ささやき声",10,"n"],["tergiversate","言い逃れをする",10,"v"],["otiose","無用な",10,"a"],["hebetude","愚鈍",10,"n"]]}
+};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const maxL=l=>T[l].levels.length-1;
+const tex=(s,d)=>{try{return katex.renderToString(s,{output:"mathml",throwOnError:false,displayMode:!!d})}catch(e){return esc(s)}};
+const mtext=s=>String(s).split("$").map((x,i)=>i%2?tex(x):esc(x)).join("");
+const COPY={
+ ja:["あなたの語彙数は？","単語の意味を4つの中から選んでください。全20問で、正解すると難しい語、間違えると易しい語が出ます。知らない語は「わからない」を押すと推定が正確になります。","簡易版の自作テストです。レベルは単語に含まれる漢字の漢検級（英語は頻度順位の目安）をもとに作者が振り分けたもので、公式の配当表や統計で検証したものではありません。推定語彙数は目安としてご覧ください。"],
+ math:["あなたの数学レベルは？","微分・積分・極限・数列・確率の問題に答えてください。全20問で、正解すると難しい問題、間違えると易しい問題が出ます。選択肢の誤答は「よくある間違い」から作っているので、選んだ誤答から間違いの癖もわかります。","問題と誤答の選択肢は、数学ドリル（SymPy で類題を作るアプリ）の問題の型から書き出したものです。レベルは型ごとに作者が付けた目安（Lv6＝数I・A、Lv7＝数II・B、Lv8＝数B〜数III入口、Lv9＝数III）です。アプリ版では記述式で答え合わせをします。"]};
+COPY.en=COPY.ja;
+/* そのレベルの語を知っている確率 */
+const pk=(th,L)=>1/(1+Math.exp(-1.6*(th-L)));
+let lang="ja",used,ans,cur,busy=false,theta;
+
+function estimate(){
+ const M=maxL(lang),isM=lang==="math",mu=isM?T.math.start:T[lang].start+1,pv=isM?9:16;let best=mu,bl=-1e9;
+ for(let th=0;th<=M+1.5;th+=0.05){
+  let ll=-((th-mu)**2)/(2*pv);
+  for(const a of ans){const k=pk(th,a.L),m=a.m;
+   const p=a.r==="ok"?k+(1-k)/m:a.r==="ng"?(1-k)*(m-1)/m:(1-k)*0.9+0.1*k;
+   ll+=Math.log(Math.max(p,1e-9))}
+  if(ll>bl){bl=ll;best=th}}
+ return best;
+}
+function nextQM(){
+ const items=T.math.w,lv=items.map(x=>x.L),lo=Math.min(...lv),hi=Math.max(...lv);
+ const pool=items.filter(x=>!used.has(x.id));
+ let target=ans.length===0?T.math.start:theta+(ans.at(-1).r==="ok"?0.4:-0.4);
+ target=Math.max(lo,Math.min(hi,target));
+ const d=Math.min(...pool.map(x=>Math.abs(x.L-target)));
+ let near=pool.filter(x=>Math.abs(x.L-target)<=d+0.5);
+ const last=ans.at(-1)?.q.u,other=near.filter(x=>x.u!==last);if(other.length)near=other;
+ return near[Math.floor(Math.random()*near.length)];
+}
+function nextQ(){
+ const pool=T[lang].w.filter(x=>!used.has(x[0]));
+ let target=ans.length===0?T[lang].start:theta+(ans.at(-1).r==="ok"?0.4:-0.4);
+ target=Math.max(1,Math.min(maxL(lang),target));
+ const d=Math.min(...pool.map(x=>Math.abs(x[2]-target)));
+ const near=pool.filter(x=>Math.abs(x[2]-target)<=d+0.5);
+ return near[Math.floor(Math.random()*near.length)];
+}
+function options(q){
+ const all=T[lang].w.filter(x=>x[0]!==q[0]&&x[1]!==q[1]&&(x[3]||"")===(q[3]||""));
+ let pool=all.filter(x=>Math.abs(x[2]-q[2])<=1);
+ if(pool.length<3)pool=all.filter(x=>Math.abs(x[2]-q[2])<=3);
+ if(pool.length<3)pool=all;
+ return shuffle([q[1],...shuffle(pool).slice(0,3).map(x=>x[1])]);
+}
+function intro(){
+ const d=T[lang];
+ if(lang==="math"){$("card").className="card math";
+  if(!d.w){$("card").innerHTML=`<div class="start"><p>問題を読み込んでいます…</p></div>`;
+   fetch("mathbank.json").then(r=>{if(!r.ok)throw 0;return r.json()}).then(j=>{d.w=j.items;d.mc=j.mc;if(lang==="math")intro()})
+    .catch(()=>{$("card").innerHTML=`<div class="start"><p>問題を読み込めませんでした。ページを再読み込みしてください。</p></div>`});return}
+  $("card").innerHTML=`<div class="start"><p>数学・全${N}問（約10分）<br>レベル6（数I・A）〜9（数III）</p><button class="btn go" id="begin">はじめる</button></div>`;
+  $("begin").onclick=begin;return}$("card").className="card "+lang;
+ $("card").innerHTML=`<div class="start"><p>${d.name}・全${N}問（約3分）<br>レベル1〜${maxL(lang)}</p><button class="btn go" id="begin">はじめる</button></div>`;
+ $("begin").onclick=begin;
+}
+function begin(){used=new Set();ans=[];theta=T[lang].start;show()}
+function showM(){
+ busy=false;const q=nextQM();used.add(q.id);
+ const opts=shuffle([{t:q.a,ok:true},...q.w.map(([t,m])=>({t,m}))]);cur={q,opts};
+ $("card").className="card math";
+ $("card").innerHTML=`<div class="prog"><span>${ans.length+1} / ${N}</span><span>数学</span></div>
+ <div class="pbar"><i style="width:${ans.length/N*100}%"></i></div>
+ <span class="mtag">${esc(q.u)}</span>
+ <p class="mp">${mtext(q.p)}</p>${q.q?`<div class="mq">${tex(q.q,true)}</div>`:""}
+ <div class="mpre">${tex(q.pre+" \\;?")}</div>
+ <div class="opts">${opts.map((o,k)=>`<button class="opt" data-k="${k}">${tex(o.t)}</button>`).join("")}</div>
+ <button class="idk" id="idk">わからない</button><div id="fb"></div>`;
+ $("card").querySelectorAll(".opt").forEach(b=>b.onclick=()=>pickM(opts[+b.dataset.k],b));
+ $("idk").onclick=()=>pickM(null,null);
+}
+function pickM(o,btn){
+ if(busy)return;busy=true;
+ const {q,opts}=cur,r=o===null?"idk":o.ok?"ok":"ng";
+ ans.push({q,L:q.L,m:opts.length,r,mc:o&&!o.ok?o.m:null});theta=estimate();
+ $("card").querySelectorAll(".opt").forEach(b=>{b.disabled=true;if(opts[+b.dataset.k].ok)b.classList.add("ok")});
+ $("idk").disabled=true;if(btn&&r==="ng")btn.classList.add("ng");
+ const go=()=>{ans.length<N?showM():result()};
+ if(r==="ok"){setTimeout(go,500);return}
+ const m=o&&o.m?T.math.mc[o.m]:null;
+ $("fb").innerHTML=`<div class="fb"><div class="h">${r==="idk"?"わからない":"不正解"}　<span style="color:var(--sub);font-weight:400">${esc(q.t)}・Lv${q.L}</span></div>
+ ${m?`<p><b>${mtext(m[0])}</b></p><p>${mtext(m[1])}</p>`:`<p>正解は ${tex(q.pre+" "+q.a)}</p>`}
+ <button class="btn go next" id="nx">${ans.length<N?"次の問題へ":"結果を見る"}</button></div>`;
+ $("nx").onclick=go;$("nx").focus({preventScroll:true});
+ $("fb").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion:reduce)").matches?"auto":"smooth",block:"nearest"});
+}
+function show(){
+ if(lang==="math"){showM();return}
+ const d=T[lang];busy=false;const q=nextQ();used.add(q[0]);const opts=options(q);cur={q,opts};
+ $("card").className="card "+lang;
+ $("card").innerHTML=`<div class="prog"><span>${ans.length+1} / ${N}</span><span>${d.name}</span></div>
+ <div class="pbar"><i style="width:${ans.length/N*100}%"></i></div>
+ <div class="word" lang="${lang}">${esc(q[0])}</div><div class="q">${d.q}</div>
+ <div class="opts">${opts.map((o,k)=>`<button class="opt" data-k="${k}">${esc(o)}</button>`).join("")}</div>
+ <button class="idk" id="idk">わからない</button>`;
+ $("card").querySelectorAll(".opt").forEach(b=>b.onclick=()=>pick(opts[+b.dataset.k],b));
+ $("idk").onclick=()=>pick(null,null);
+}
+function pick(o,btn){
+ if(busy)return;busy=true;
+ const {q,opts}=cur,r=o===null?"idk":(o===q[1]?"ok":"ng");ans.push({q,L:q[2],m:4,r});theta=estimate();
+ $("card").querySelectorAll(".opt").forEach(b=>{if(opts[+b.dataset.k]===q[1])b.classList.add("ok")});
+ if(btn&&r==="ng")btn.classList.add("ng");
+ setTimeout(()=>{ans.length<N?show():result()},r==="ok"?350:900);
+}
+function resultM(){
+ const d=T.math,lvs=[...new Set(d.w.map(x=>x.L))].sort((a,b)=>a-b),lo=lvs[0];
+ const reach=Math.floor(theta),label=reach<lo?`${d.levels[lo][0]}未満`:`${d.levels[Math.min(reach,10)][0]}相当`;
+ const rows=lvs.map(L=>{const a=ans.filter(x=>x.L===L);
+  return `<div class="row"><span class="lv">Lv${L}</span><span class="lb">${d.levels[L][0]}</span><div class="t"><div class="f" style="width:${Math.round(pk(theta,L)*100)}%"></div></div><span class="n">${a.length?a.filter(x=>x.r==="ok").length+"/"+a.length:"–"}</span></div>`}).join("");
+ const cnt={};for(const a of ans)if(a.mc)cnt[a.mc]=(cnt[a.mc]||0)+1;
+ const mcs=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,5);
+ const miss=ans.filter(x=>x.r!=="ok").sort((a,b)=>a.L-b.L);
+ const ok=ans.filter(x=>x.r==="ok").length;
+ $("card").innerHTML=`<div>推定される到達レベル（数学）</div>
+ <div class="bigl">${esc(label)}</div>
+ <p class="lvl">レベル <b>${theta.toFixed(1)}</b>　正解 ${ok} / ${ans.length} 問</p>
+ <div class="rows">${rows}</div>
+ <p class="note">棒の長さは、そのレベルの問題に正解できると推定される割合です。右の数字は実際の正答数です。選択式なので、当てずっぽうで正解する確率（選択肢の数分の1）を考慮して推定しています。</p>
+ ${mcs.length?`<h2>よく出た間違いのパターン</h2><ul class="mc">${mcs.map(([id,n])=>`<li><b>${mtext(d.mc[id][0])}（${n}回）</b><span>${mtext(d.mc[id][1])}</span></li>`).join("")}</ul>`:""}
+ ${miss.length?`<h2>復習しておきたい型</h2><ul class="rev">${miss.map(x=>`<li><b>${esc(x.q.t)}</b><span>${esc(x.q.u)}</span><i>Lv${x.L}</i></li>`).join("")}</ul>`:""}
+ <div class="acts"><button class="btn go" id="again">もう一度</button><button class="btn" id="other">日本語版へ</button></div>`;
+ $("again").onclick=begin;$("other").onclick=()=>setLang("ja");
+ $("card").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion:reduce)").matches?"auto":"smooth",block:"start"});
+}
+function result(){
+ if(lang==="math"){resultM();return}
+ const d=T[lang],M=maxL(lang);let total=0;
+ for(let L=1;L<=M;L++)total+=d.levels[L][1]*pk(theta,L);
+ const step=lang==="ja"?1000:100,est=Math.round(total/step)*step;
+ const lv=Math.max(1,Math.min(M,theta)),li=Math.max(1,Math.min(M,Math.floor(lv+0.5)));
+ const rows=[];for(let L=1;L<=M;L++){const a=ans.filter(x=>x.L===L);
+  rows.push(`<div class="row"><span class="lv">Lv${L}</span><span class="lb">${d.levels[L][0]}</span><div class="t"><div class="f" style="width:${Math.round(pk(theta,L)*100)}%"></div></div><span class="n">${a.length?a.filter(x=>x.r==="ok").length+"/"+a.length:"–"}</span></div>`)}
+ const miss=ans.filter(x=>x.r!=="ok").sort((a,b)=>a.L-b.L);
+ $("card").innerHTML=`<div>推定語彙数（${d.name}）</div>
+ <div class="big">${est.toLocaleString()}<small>${d.unit}</small></div>
+ <p class="lvl">レベル <b>${lv.toFixed(1)}</b>　${d.levels[li][0]}相当</p>
+ <div class="rows">${rows.join("")}</div>
+ <p class="note">棒の長さは、そのレベルの語を知っていると推定される割合です。右の数字は実際の正答数です。当てずっぽうで正解する確率（4分の1）を考慮して推定しています。</p>
+ ${miss.length?`<h2>覚えておきたい語</h2><ul class="rev">${miss.map(x=>`<li><b lang="${lang}">${esc(x.q[0])}</b><span>${esc(x.q[1])}</span><i>Lv${x.q[2]}</i></li>`).join("")}</ul>`:""}
+ <div class="acts"><button class="btn go" id="again">もう一度</button><button class="btn" id="other">${lang==="ja"?"English版へ":"日本語版へ"}</button></div>`;
+ $("again").onclick=begin;
+ $("other").onclick=()=>setLang(lang==="ja"?"en":"ja");
+ $("card").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion:reduce)").matches?"auto":"smooth",block:"start"});
+}
+function setLang(l){lang=l;for(const k of ["ja","en","math"])$("t-"+k).setAttribute("aria-selected",l===k);
+ const c=COPY[l];$("ttl").textContent=c[0];$("lead").textContent=c[1];$("foot").textContent=c[2];intro()}
+$("t-ja").onclick=()=>setLang("ja");$("t-en").onclick=()=>setLang("en");$("t-math").onclick=()=>setLang("math");
+document.addEventListener("keydown",e=>{const n="1234".indexOf(e.key);const b=$("card").querySelectorAll(".opt");if(n>=0&&b[n])b[n].click();if(e.key==="0"&&$("idk"))$("idk").click();if(e.key==="Enter"&&$("nx")&&document.activeElement!==$("nx"))$("nx").click()});
+intro();
+}
+</script>
+</body>
+</html>
