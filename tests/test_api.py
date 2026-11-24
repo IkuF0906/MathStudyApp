@@ -207,6 +207,15 @@ def test_old_db_is_migrated_to_local_user(tmp_path, sandbox):
     assert _power_attempts(TestClient(later.app)) == 0
 
 
+def test_cookie_is_renewed_on_each_use(client):
+    # 有効期限を「最後に使ってから」数えるため、Cookie を持っていても付け直す
+    client.get("/api/stats")
+    uid = client.cookies.get("drill_uid")
+    res = client.get("/api/stats")
+    assert res.cookies.get("drill_uid") == uid
+    assert "max-age=34560000" in res.headers["set-cookie"].lower()
+
+
 def test_cookie_is_secure_only_over_https(client):
     assert "secure" not in client.get("/api/stats").headers["set-cookie"].lower()
     https = TestClient(client.app, base_url="https://testserver")

@@ -21,10 +21,20 @@ jobs:
       - run: pip install -r requirements-dev.txt
       - run: python -m pytest -q
 
+  # nginx の設定の書き間違いで本番の画面が出なくなるのを防ぐ（転送先の app は名前だけ解決できればよい）
+  nginx-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: >
+          docker run --rm --add-host app:127.0.0.1
+          -v "$PWD/deploy/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro"
+          nginx:1.27-alpine nginx -t
+
   # テストが通った main のコミットだけ、イメージを作って GHCR に置く。
   # VM には下の deploy ジョブが入れ替える。PC で Watchtower を動かしていれば、新しい latest に入れ替わる
   publish:
-    needs: pytest
+    needs: [pytest, nginx-config]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:

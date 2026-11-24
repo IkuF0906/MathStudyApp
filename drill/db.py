@@ -4,7 +4,7 @@ import json
 import sqlite3
 import threading
 from collections import Counter
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from . import scheduler
 from .scheduler import TypeState
@@ -41,6 +41,15 @@ CREATE TABLE IF NOT EXISTS placement (
 # 利用者を区別する前の DB の履歴は、この利用者のものとして引き継ぐ
 LOCAL_USER = "local"
 
+# 古い記録を消して、DB が増え続けないようにする（公開して訪問者が増えても、ディスクを使い切らないため）
+# - レベル診断の途中経過: 結果は画面に返したあとは使わないので、始めてから1日で消す
+# - 利用者の履歴: Cookie の有効期限（最後に使ってから400日）を過ぎたら、もう誰も見られないので消す
+# - 1人あたりの解答の記録: 新しいものから一定の数だけ残す（成績の正答数は type_state にあるので消えない）
+PLACEMENT_TTL = timedelta(days=1)
+USER_TTL = timedelta(days=400)
+MAX_ATTEMPTS_PER_USER = 5000
+CLEANUP_INTERVAL = timedelta(hours=1)
+
 
 def _migrate(conn: sqlite3.Connection) -> None:
     """user_id の列がない古い DB に列を足し、既存の行を LOCAL_USER のものにする。"""
@@ -65,6 +74,7 @@ class Store:
         self._conn.row_factory = sqlite3.Row
         # FastAPI の同期エンドポイントは複数スレッドから呼ばれるため直列化する
         self._lock = threading.Lock()
+        self._last_cleanup: datetime | None = None
         with self._lock, self._conn:
             _migrate(self._conn)
             self._conn.executescript(_SCHEMA)
@@ -109,7 +119,29 @@ class Store:
                 " VALUES (?, ?, ?, ?, ?, ?)",
                 (user_id, type_id, new.box, new.due_at.isoformat(), new.attempts, new.correct),
             )
+            self._conn.execute(
+                "DELETE FROM attempts WHERE user_id = ? AND id <= ("
+                " SELECT id FROM attempts WHERE user_id = ? ORDER BY id DESC LIMIT 1 OFFSET ?)",
+                (user_id, user_id, MAX_ATTEMPTS_PER_USER),
+            )
         return new
+
+    def cleanup(self, now: datetime) -> None:
+        """期限を過ぎた記録を消す（上の PLACEMENT_TTL・USER_TTL）。"""
+        with self._lock, self._conn:
+            self._conn.execute("DELETE FROM placement WHERE created_at < ?", ((now - PLACEMENT_TTL).isoformat(),))
+            stale = (
+                "SELECT user_id FROM attempts WHERE user_id != ? GROUP BY user_id HAVING MAX(created_at) < ?"
+            )
+            args = (LOCAL_USER, (now - USER_TTL).isoformat())
+            self._conn.execute(f"DELETE FROM type_state WHERE user_id IN ({stale})", args)
+            self._conn.execute(f"DELETE FROM attempts WHERE user_id IN ({stale})", args)
+        self._last_cleanup = now
+
+    def maybe_cleanup(self, now: datetime) -> None:
+        """前の掃除から CLEANUP_INTERVAL 経っていれば掃除する。"""
+        if self._last_cleanup is None or now - self._last_cleanup >= CLEANUP_INTERVAL:
+            self.cleanup(now)
 
     def misconception_counts(self, user_id: str) -> dict[str, Counter]:
         """利用者の、型ごとの診断された誤答ルールの回数。"""

@@ -20,7 +20,7 @@ from pydantic import BaseModel
 
 from . import placement, scheduler
 from .checker import AnswerParseError
-from .db import LOCAL_USER, Store
+from .db import LOCAL_USER, USER_TTL, Store
 from .sandbox import Busy, ComputeTimeout, Sandbox, from_env
 from .templates import MISCONCEPTIONS, PROBLEM_TYPES, UNITS, Problem, from_id, generate
 
@@ -115,15 +115,16 @@ def create_app(
             raise HTTPException(503, "混み合っています。少し待ってからもう一度送ってください")
 
     def user_id(request: Request, response: Response) -> str:
-        """Cookie の利用者 ID。なければ新しく発行して Cookie に入れる。"""
+        """Cookie の利用者 ID。なければ新しく発行する。
+        使うたびに Cookie を付け直し、有効期限を「最後に使ってから400日」にする（DB の掃除の期限と同じ）。"""
+        store.maybe_cleanup(now())
         uid = request.cookies.get(USER_COOKIE, "")
-        if _USER_ID.fullmatch(uid):
-            return uid
-        uid = LOCAL_USER if adopt_local else uuid.uuid4().hex
+        if not _USER_ID.fullmatch(uid):
+            uid = LOCAL_USER if adopt_local else uuid.uuid4().hex
         response.set_cookie(
             USER_COOKIE,
             uid,
-            max_age=400 * 24 * 3600,
+            max_age=int(USER_TTL.total_seconds()),
             httponly=True,
             samesite="lax",
             secure=request.url.scheme == "https",
