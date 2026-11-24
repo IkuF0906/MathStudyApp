@@ -241,7 +241,11 @@ async function startPlacement() {
   $("placement-start").disabled = true;
   let r;
   try {
-    r = await api("/api/placement/start", { method: "POST" });
+    r = await api("/api/placement/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}", // JSON の本文を必須にしている（別サイトのフォームから送らせないため）
+    });
   } catch (e) {
     $("placement-error").textContent = `診断を始められませんでした: ${e.message}`;
     $("placement-error").hidden = false;

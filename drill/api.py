@@ -6,15 +6,20 @@
 ブラウザに、利用者を区別する前の履歴（ID は local）を引き継がせる。
 """
 
+import ipaddress
 import os
 import random
 import re
+import threading
 import uuid
 from collections import Counter
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -34,6 +39,10 @@ MAX_ANSWER_LENGTH = 300
 class AnswerRequest(BaseModel):
     problem_id: str
     answer: str
+
+
+class PlacementStartRequest(BaseModel):
+    """本文は空でよい。JSON の本文を必須にして、別サイトのフォームから送れないようにする。"""
 
 
 class PlacementAnswerRequest(BaseModel):
@@ -78,6 +87,55 @@ def _stats_json(s: scheduler.TypeState, mistakes: Counter) -> dict:
     }
 
 
+def _cross_site(request: Request) -> bool:
+    """別のサイトのページから送られたリクエストか。
+
+    ブラウザが付ける Sec-Fetch-Site で決める。付けない古いブラウザでは、Origin と Host を比べる。
+    """
+    site = request.headers.get("sec-fetch-site")
+    if site is not None:
+        return site not in ("same-origin", "none")
+    origin = request.headers.get("origin")
+    return origin is not None and urlsplit(origin).netloc != request.headers.get("host")
+
+
+def _client_key(request: Request) -> str:
+    """送信元の鍵。nginx が付ける X-Real-IP（なければ直接の接続元）。
+    IPv6 は1つの回線に /64 の範囲が割り当てられるので、/64 でまとめる。"""
+    ip = request.headers.get("x-real-ip") or (request.client.host if request.client else "")
+    try:
+        addr = ipaddress.ip_address(ip)
+    except ValueError:
+        return ip
+    if addr.version == 6:
+        return str(ipaddress.ip_network(f"{addr}/64", strict=False))
+    return str(addr)
+
+
+class _ComputeSlots:
+    """送信元ごとに、答え合わせの計算を同時に1つまでにする。
+
+    nginx の limit_conn は接続を数えるので、送った直後に接続を切ると数が戻るが、
+    計算はワーカーで続いている。ここでは計算が終わるまで数えておく。
+    """
+
+    def __init__(self):
+        self._busy: set[str] = set()
+        self._lock = threading.Lock()
+
+    @contextmanager
+    def hold(self, key: str):
+        with self._lock:
+            if key in self._busy:
+                raise HTTPException(429, "前の答え合わせが終わってから送ってください")
+            self._busy.add(key)
+        try:
+            yield
+        finally:
+            with self._lock:
+                self._busy.discard(key)
+
+
 def _new_problem(type_id: str) -> Problem:
     return generate(type_id, random.randrange(10**9))
 
@@ -98,13 +156,22 @@ def create_app(
     app = FastAPI(title="学力診断テスト")
     store = Store(db_path)
     sandbox = sandbox or from_env()
+    slots = _ComputeSlots()
 
-    def grade(task: str, text: str, *args):
+    @app.middleware("http")
+    async def reject_cross_site(request: Request, call_next):
+        """別のサイトのページから、状態を変えるリクエスト（POST など）を送らせない（CSRF 対策）。"""
+        if request.method not in ("GET", "HEAD", "OPTIONS") and _cross_site(request):
+            return JSONResponse({"detail": "別のサイトからの送信は受け付けません"}, status_code=403)
+        return await call_next(request)
+
+    def grade(request: Request, task: str, text: str, *args):
         """ワーカーで答え合わせの処理をし、失敗を HTTP のエラーに変える。"""
         if len(text) > MAX_ANSWER_LENGTH:
             raise HTTPException(400, f"解答が長すぎます（{MAX_ANSWER_LENGTH}文字まで）")
         try:
-            return sandbox.call(task, *args, text)
+            with slots.hold(_client_key(request)):
+                return sandbox.call(task, *args, text)
         except KeyError:
             raise HTTPException(404, "問題が見つかりません")
         except AnswerParseError as exc:
@@ -160,13 +227,13 @@ def create_app(
         return _problem_json(_new_problem(state.type_id))
 
     @app.get("/api/preview")
-    def preview(text: str):
+    def preview(text: str, request: Request):
         """テキスト入力の解答がどの式として読み取られるかを返す（答え合わせ前の確認用）。"""
-        return {"latex": grade("preview", text)}
+        return {"latex": grade(request, "preview", text)}
 
-    def check_and_record(uid: str, problem_id: str, text: str) -> tuple[dict, dict]:
+    def check_and_record(request: Request, uid: str, problem_id: str, text: str) -> tuple[dict, dict]:
         """答え合わせをして履歴に残す。(答え合わせの結果, 画面に返す内容) を返す。"""
-        g = grade("check", text, problem_id)
+        g = grade(request, "check", text, problem_id)
         mid = g["misconception_id"]
         mc = MISCONCEPTIONS[mid] if mid else None
         state = store.record(uid, g["problem_id"], g["type_id"], text, g["correct"], mid, now())
@@ -181,8 +248,8 @@ def create_app(
         }
 
     @app.post("/api/answer")
-    def answer(req: AnswerRequest, uid: str = Depends(user_id)):
-        return check_and_record(uid, req.problem_id, req.answer)[1]
+    def answer(req: AnswerRequest, request: Request, uid: str = Depends(user_id)):
+        return check_and_record(request, uid, req.problem_id, req.answer)[1]
 
     # --- レベル診断 ---
 
@@ -194,7 +261,7 @@ def create_app(
         return {**_problem_json(p), "index": len(responses) + 1, "total": placement.TOTAL}
 
     @app.post("/api/placement/start")
-    def placement_start(uid: str = Depends(user_id)):
+    def placement_start(_: PlacementStartRequest, uid: str = Depends(user_id)):
         session_id = uuid.uuid4().hex
         data = {"responses": [], "current": None}
         problem = placement_problem(data, random.Random())
@@ -202,7 +269,7 @@ def create_app(
         return {"session_id": session_id, "total": placement.TOTAL, "problem": problem}
 
     @app.post("/api/placement/answer")
-    def placement_answer(req: PlacementAnswerRequest, uid: str = Depends(user_id)):
+    def placement_answer(req: PlacementAnswerRequest, request: Request, uid: str = Depends(user_id)):
         data = store.placement(req.session_id, uid)
         if data is None:
             raise HTTPException(404, "診断が見つかりません。はじめからやり直してください")
@@ -224,7 +291,7 @@ def create_app(
                 "next_due": state.due_at.isoformat(),
             }
         else:
-            g, body = check_and_record(uid, req.problem_id, req.answer)
+            g, body = check_and_record(request, uid, req.problem_id, req.answer)
             correct, mid = g["correct"], g["misconception_id"]
         data["responses"].append(
             {"type_id": type_id, "level": PROBLEM_TYPES[type_id].level, "correct": correct, "misconception_id": mid}

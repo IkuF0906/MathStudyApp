@@ -74,12 +74,24 @@ class _Worker:
 
 
 class Sandbox:
-    def __init__(self, workers: int = 2, timeout: float = 5.0, memory_mb: int | None = None, wait: float = 30.0):
-        """timeout は1回の計算の上限（秒）、wait は空いたワーカーと、その起動を待つ上限（秒）。"""
+    def __init__(
+        self,
+        workers: int = 2,
+        timeout: float = 5.0,
+        memory_mb: int | None = None,
+        wait: float = 30.0,
+        max_waiting: int = 8,
+    ):
+        """timeout は1回の計算の上限（秒）、wait は空いたワーカーと、その起動を待つ上限（秒）。
+        max_waiting は空きを待てる数。それを超えたら待たずに Busy にする
+        （たくさん送られて待ちの列が伸び、API のスレッドを使い切るのを防ぐ）。"""
         self.workers = workers
         self.timeout = timeout
         self.memory_mb = memory_mb
         self.wait = wait
+        self.max_waiting = max_waiting
+        self._waiting = 0
+        self._waiting_lock = threading.Lock()
         # スレッドのあるプロセスで fork すると固まることがあるので、どの OS でも spawn にする
         self._ctx = mp.get_context("spawn")
         self._idle: queue.Queue[_Worker] | None = None
@@ -103,10 +115,17 @@ class Sandbox:
     def call(self, task: str, *args):
         """ワーカーで grading.TASKS[task](*args) を実行し、結果を返す。例外はそのまま投げ直す。"""
         idle = self._pool()
+        with self._waiting_lock:
+            if self._waiting >= self.max_waiting:
+                raise Busy()
+            self._waiting += 1
         try:
             w = idle.get(timeout=self.wait)
         except queue.Empty:
             raise Busy() from None
+        finally:
+            with self._waiting_lock:
+                self._waiting -= 1
         try:
             # 起動直後のワーカーは SymPy の読み込みを待つ（この時間は計算の上限に含めない）
             if not w.wait_ready(self.wait):

@@ -256,7 +256,7 @@ def placement_answer(client, session_id, problem_id, text="", skip=False):
 
 
 def test_placement_runs_to_the_end(client):
-    start = client.post("/api/placement/start").json()
+    start = client.post("/api/placement/start", json={}).json()
     sid, problem = start["session_id"], start["problem"]
     assert start["total"] == 20 and problem["index"] == 1
     seen = []
@@ -279,7 +279,7 @@ def test_placement_runs_to_the_end(client):
 
 
 def test_placement_grades_with_checker(client):
-    start = client.post("/api/placement/start").json()
+    start = client.post("/api/placement/start", json={}).json()
     from drill.templates import from_id
 
     from drill.placement import START_LEVEL
@@ -294,7 +294,7 @@ def test_placement_grades_with_checker(client):
 
 
 def test_placement_rejects_stale_or_foreign_answers(client):
-    start = client.post("/api/placement/start").json()
+    start = client.post("/api/placement/start", json={}).json()
     sid, pid = start["session_id"], start["problem"]["problem_id"]
     assert placement_answer(client, sid, "power-0", skip=True).status_code == 409
     assert placement_answer(client, "nope", pid, skip=True).status_code == 404
@@ -306,7 +306,7 @@ def test_placement_rejects_stale_or_foreign_answers(client):
 
 
 def test_placement_parse_error_keeps_problem(client):
-    start = client.post("/api/placement/start").json()
+    start = client.post("/api/placement/start", json={}).json()
     sid, pid = start["session_id"], start["problem"]["problem_id"]
     assert placement_answer(client, sid, pid, "(x+").status_code == 400
     assert placement_answer(client, sid, pid, skip=True).status_code == 200
@@ -320,3 +320,82 @@ def test_top_page_and_vocab_are_served(client):
     js = client.get("/vocab.js")
     assert js.status_code == 200
     assert "showVocab" in js.text and "語彙" in js.text
+
+
+# --- 公開に向けた守り ---
+
+
+def test_cross_site_post_is_rejected_without_new_cookie(client):
+    # 別サイトのページからのフォームの送信で、利用者の Cookie を置き換えさせない
+    res = client.post(
+        "/api/placement/start",
+        data={"x": "1"},
+        headers={"Sec-Fetch-Site": "cross-site", "Origin": "https://evil.example"},
+    )
+    assert res.status_code == 403
+    assert "drill_uid" not in res.headers.get("set-cookie", "")
+
+
+def test_placement_start_needs_json_body(client):
+    # Sec-Fetch-Site を付けない古いブラウザでも、フォームの本文では始められない
+    res = client.post("/api/placement/start", data={"x": "1"})
+    assert res.status_code == 422
+    assert "drill_uid" not in res.headers.get("set-cookie", "")
+
+
+def test_origin_is_checked_when_sec_fetch_site_is_missing(client):
+    other = client.post("/api/placement/start", json={}, headers={"Origin": "https://evil.example"})
+    assert other.status_code == 403
+    same = client.post("/api/placement/start", json={}, headers={"Origin": "http://testserver"})
+    assert same.status_code == 200
+    fetch = client.post("/api/placement/start", json={}, headers={"Sec-Fetch-Site": "same-origin"})
+    assert fetch.status_code == 200
+
+
+def test_cookie_is_kept_on_rejected_cross_site_post(client):
+    client.get("/api/stats")
+    uid = client.cookies.get("drill_uid")
+    res = client.post("/api/placement/start", json={}, headers={"Sec-Fetch-Site": "cross-site"})
+    assert res.status_code == 403
+    assert client.cookies.get("drill_uid") == uid
+
+
+def test_client_key_groups_ipv6_by_64():
+    from starlette.requests import Request as StarletteRequest
+
+    from drill.api import _client_key
+
+    def key(real_ip):
+        scope = {"type": "http", "headers": [(b"x-real-ip", real_ip.encode())], "client": ("10.0.0.1", 1)}
+        return _client_key(StarletteRequest(scope))
+
+    assert key("2001:db8:1:2::1") == key("2001:db8:1:2:aaaa:bbbb:cccc:dddd")
+    assert key("2001:db8:1:2::1") != key("2001:db8:1:3::1")
+    assert key("203.0.113.5") == "203.0.113.5"
+
+
+def test_one_computation_per_client_at_a_time():
+    from fastapi import HTTPException
+
+    from drill.api import _ComputeSlots
+
+    slots = _ComputeSlots()
+    with slots.hold("a"):
+        with pytest.raises(HTTPException) as e:
+            with slots.hold("a"):
+                pass
+        assert e.value.status_code == 429
+        with slots.hold("b"):  # ほかの送信元は計算できる
+            pass
+    with slots.hold("a"):  # 終われば、また送れる
+        pass
+
+
+def test_too_many_waiting_is_busy(client, sandbox):
+    # 空きを待つ数が上限に達していたら、待たずに「混み合っています」を返す
+    sandbox.max_waiting = 0
+    try:
+        res = answer(client, "power-0", "0")
+    finally:
+        sandbox.max_waiting = 8
+    assert res.status_code == 503
