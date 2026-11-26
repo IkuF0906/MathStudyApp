@@ -1,6 +1,6 @@
 // 語彙のチェック（漢字＝日本語・英語）。単語の意味を選ぶ20問の適応型テストで語彙数を推定する。
 // サーバーは使わず、このファイルだけで動く。推定の考え方はレベル診断（drill/placement.py）と同じで、
-// 4択なので当てずっぽうで正解する確率（1/4）を考えに入れる。
+// 4択なので当てずっぽうで正解する確率を考えに入れる。消去法で選択肢を絞れるので、1/4 ではなく 1/3 とみる。
 (() => {
   const N = 20;
   /* 単語: [語, 意味, レベル, 品詞] / levels: [名前, その段階に属する語のおおよその数] */
@@ -211,6 +211,10 @@
   const maxL = () => T[lang].levels.length - 1;
   // そのレベルの語を知っている確率
   const pk = (th, L) => 1 / (1 + Math.exp(-1.6 * (th - L)));
+  // 知らない語を当てずっぽうで正解する確率
+  const GUESS = 1 / 3;
+  // 最初の見込み（事前分布）の広さ（標準偏差、レベル）。広すぎると、数問の正解で推定が上の段まで跳ぶ
+  const PRIOR_SD = 2;
   const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   let lang = null; // 最初にページを開いたときに決まる
@@ -228,10 +232,10 @@
     let best = mu;
     let bl = -1e9;
     for (let th = 0; th <= M + 1.5; th += 0.05) {
-      let ll = -((th - mu) ** 2) / (2 * 16);
+      let ll = -((th - mu) ** 2) / (2 * PRIOR_SD ** 2);
       for (const a of ans) {
         const k = pk(th, a.q[2]);
-        const p = a.r === "ok" ? k + (1 - k) / 4 : a.r === "ng" ? (1 - k) * 0.75 : (1 - k) * 0.9 + 0.1 * k;
+        const p = a.r === "ok" ? k + (1 - k) * GUESS : a.r === "ng" ? (1 - k) * (1 - GUESS) : (1 - k) * 0.9 + 0.1 * k;
         ll += Math.log(Math.max(p, 1e-9));
       }
       if (ll > bl) {
@@ -242,10 +246,14 @@
     return best;
   }
 
-  // 直前に正解なら θ + 0.4、不正解なら θ - 0.4 に近いレベルの、まだ出していない語
+  // 直前に正解なら θ + 0.4、不正解なら θ - 0.4 に近いレベルの、まだ出していない語。
+  // ただし、正解したことのある最も高いレベル（まだなければ最初のレベルの1つ下）の1つ上までにする。
+  // 正解が続いても1段ずつしか上がらない（数問の正解や当てずっぽうで、上の段の語ばかりにならない）
   function nextQ() {
     const pool = T[lang].w.filter((x) => !used.has(x[0]));
     let target = ans.length === 0 ? T[lang].start : theta + (ans.at(-1).r === "ok" ? 0.4 : -0.4);
+    const hi = Math.max(T[lang].start - 1, ...ans.filter((a) => a.r === "ok").map((a) => a.q[2]));
+    target = Math.min(target, hi + 1);
     target = Math.max(1, Math.min(maxL(), target));
     const d = Math.min(...pool.map((x) => Math.abs(x[2] - target)));
     const near = pool.filter((x) => Math.abs(x[2] - target) <= d + 0.5);
