@@ -398,7 +398,7 @@
       <div class="vocab-groups">${groupRows}</div>
       <details class="vocab-detail"><summary>${lang === "ja" ? "級" : "レベル"}ごとの内訳と実際の正答数</summary>
         <div class="level-rows">${rows.join("")}</div>
-        <p class="hint">棒の長さは、そのレベルの語を知っていると推定される割合です。右の数字は実際の正答数です。当てずっぽうで正解する確率（4分の1）を考慮して推定しています。</p>
+        <p class="hint">棒の長さは、そのレベルの語を知っていると推定される割合です。右の数字は実際の正答数です。当てずっぽうで正解する確率（消去法で絞れることを見込んで3分の1）を考慮して推定しています。</p>
       </details>
       ${miss.length ? `<h3>覚えておきたい語</h3><ul class="vocab-review">${miss.map((x, i) => `<li${i >= 5 ? " hidden" : ""}><b lang="${lang}">${esc(x.q[0])}</b><span>${esc(x.q[1])}</span><i>Lv${x.q[2]}</i></li>`).join("")}</ul>
         ${miss.length > 5 ? `<button type="button" class="link" id="vocab-more">すべて見る（${miss.length}語）</button>` : ""}` : ""}

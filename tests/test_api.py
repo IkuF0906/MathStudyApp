@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from drill.api import MAX_ANSWER_LENGTH, create_app
 from drill.sandbox import Sandbox
+from drill.templates import PROBLEM_TYPES
 
 NOW = datetime(2026, 10, 5, 12, 0)
 
@@ -276,6 +277,11 @@ def test_placement_runs_to_the_end(client):
     result = body["result"]
     assert result["answered"] == TOTAL and result["correct"] == 0
     assert result["label"] == "中学1年未満"
+    # 1問ごとに、問題・自分の答え・正答を結果に入れる
+    assert len(result["items"]) == TOTAL
+    first = result["items"][0]
+    assert first["skipped"] is True and first["correct"] is False and first["user_latex"] == ""
+    assert first["answer_latex"] and first["prompt"] and first["level"] == 1
     # 診断で解いた問題は、復習の履歴にも残る
     attempts = sum(s["attempts"] for s in client.get("/api/stats").json())
     assert attempts == TOTAL
@@ -285,14 +291,15 @@ def test_placement_grades_with_checker(client):
     start = client.post("/api/placement/start", json={}).json()
     from drill.templates import from_id
 
-    from drill.placement import START_LEVEL
+    from drill.placement import PRIOR_CENTER, START_LEVEL
 
     p = from_id(start["problem"]["problem_id"])
     items = p.answer.args if isinstance(p.answer, (sp.Tuple, sp.FiniteSet)) else [p.answer]
     text = ", ".join(str(e).replace("**", "^") for e in items)
     body = placement_answer(client, start["session_id"], p.problem_id, text).json()
     assert body["correct"] is True
-    assert body["theta"] > START_LEVEL  # 最初は START_LEVEL の問題。正解すると推定が上がる
+    assert PROBLEM_TYPES[p.type_id].level == START_LEVEL == 1  # 最初は中学1年の問題
+    assert body["theta"] >= PRIOR_CENTER  # 易しい問題に正解しても推定はほとんど動かない（下がりはしない）
     assert body["next"]["index"] == 2
 
 

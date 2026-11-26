@@ -296,6 +296,20 @@ def create_app(
         data["responses"].append(
             {"type_id": type_id, "level": PROBLEM_TYPES[type_id].level, "correct": correct, "misconception_id": mid}
         )
+        # 結果の画面で、1問ごとに自分の答えと正答を見せるために残す
+        p = from_id(req.problem_id)
+        data.setdefault("log", []).append(
+            {
+                "type_name": PROBLEM_TYPES[type_id].name,
+                "level": PROBLEM_TYPES[type_id].level,
+                "prompt": p.prompt,
+                "latex": p.latex,
+                "correct": correct,
+                "skipped": bool(req.skip),
+                "user_latex": body["user_latex"],
+                "answer_latex": body["answer_latex"],
+            }
+        )
         responses = [placement.Response(**r) for r in data["responses"]]
         done = len(responses) >= placement.TOTAL
         data["current"] = None
@@ -303,7 +317,7 @@ def create_app(
         body["index"] = len(responses)
         body["total"] = placement.TOTAL
         body["next"] = None if done else placement_problem(data, random.Random())
-        body["result"] = placement.summarize(responses) if done else None
+        body["result"] = placement.summarize(responses, data["log"]) if done else None
         store.save_placement(req.session_id, uid, data, now())
         return body
 

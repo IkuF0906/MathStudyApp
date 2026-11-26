@@ -410,6 +410,41 @@ function showPlacementResult(res) {
   $("pr-missed-box").hidden = !res.missed.length;
   $("placement-review").hidden = !res.missed.length;
 
+  // 1問ごとの問題・自分の答え・正答（古い版のサーバーの結果には items がない）
+  const items = $("pr-items");
+  items.innerHTML = "";
+  (res.items || []).forEach((it, i) => {
+    const li = el("li", `pr-item ${it.correct ? "ok" : "ng"}`);
+    const head = el("p", "pr-item-head");
+    head.append(
+      el("span", "pr-item-mark", it.correct ? "○" : "✕"),
+      el("span", "pr-item-no", `問${i + 1}`),
+      el("span", "visually-hidden", it.correct ? "正解" : it.skipped ? "わからない" : "不正解"),
+    );
+    const name = el("span", "pr-item-name");
+    setMathText(name, it.type_name);
+    head.append(name, el("span", "pr-item-lv", `Lv${it.level}`));
+    const q = el("div", "pr-item-q");
+    const prompt = el("p");
+    setMathText(prompt, it.prompt);
+    q.appendChild(prompt);
+    if (it.latex) {
+      const m = el("p", "pr-item-math");
+      setLatex(m, it.latex);
+      q.appendChild(m);
+    }
+    const ans = el("dl", "pr-item-ans");
+    const mine = el("dd");
+    if (it.skipped) mine.textContent = "（わからない）";
+    else setLatex(mine, it.user_latex);
+    const right = el("dd");
+    setLatex(right, it.answer_latex);
+    ans.append(el("dt", "", "あなたの答え"), mine, el("dt", "", "正答"), right);
+    li.append(head, q, ans);
+    items.appendChild(li);
+  });
+  $("pr-items-box").hidden = !items.children.length;
+
   const rows = $("pr-levels");
   rows.innerHTML = "";
   for (const b of res.by_level) {

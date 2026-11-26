@@ -1,6 +1,6 @@
 """レベル診断（適応型テスト）。
 
-20問で数学の到達レベル θ を推定する。問題の型ごとのレベル L に対して、
+10問で数学の到達レベル θ を推定する。問題の型ごとのレベル L に対して、
 正解する確率を P(正解 | θ, L) = 1 / (1 + exp(-1.6 (θ - L))) とおき（1パラメータのロジスティックモデル）、
 回答ごとに θ を最尤推定（弱い事前分布つき）し直す。
 記述式なので当てずっぽうで正解する確率は 0 とみなし、補正はしない。
@@ -20,7 +20,8 @@ from .templates import MISCONCEPTIONS, PROBLEM_TYPES, UNITS
 
 TOTAL = 10  # 1回の診断の問題数（20問では長いので 10 問にしている）
 SLOPE = 1.6  # ロジスティック曲線の傾き（レベルが1違うと正答率がどれだけ変わるか）
-START_LEVEL = 5  # 最初の問題のレベル（事前分布の中心）。中学〜数III の真ん中の数I から始める
+START_LEVEL = 1  # 最初の問題のレベル。易しい中学1年から始め、正解で 3 段ずつ上がる
+PRIOR_CENTER = 5  # 事前分布の中心。中学〜数III の真ん中の数I
 PRIOR_SD = 3.0  # 事前分布の標準偏差。大きいほど弱い（回答に引っ張られやすい）
 FAST_JUMP = 3  # レベル SLOW_FROM より下で正解したときに上がる段数
 SLOW_FROM = 8  # このレベルから上は、2 問続けて正解したときだけ 1 段上がる
@@ -55,7 +56,7 @@ def p_correct(theta: float, level: float) -> float:
 
 
 def _log_posterior(theta: float, responses: list[Response]) -> float:
-    lp = -((theta - START_LEVEL) ** 2) / (2 * PRIOR_SD**2)
+    lp = -((theta - PRIOR_CENTER) ** 2) / (2 * PRIOR_SD**2)
     for r in responses:
         p = p_correct(theta, r.level)
         lp += math.log(p if r.correct else 1 - p)
@@ -117,8 +118,11 @@ def level_name(level: int) -> str:
     return LEVEL_NAMES[min(max(level, MIN_LEVEL), MAX_LEVEL)]
 
 
-def summarize(responses: list[Response]) -> dict:
-    """診断結果。到達レベルは、正答率が 50% 以上と推定される最も高いレベル（θ の切り捨て）。"""
+def summarize(responses: list[Response], log: list[dict] | None = None) -> dict:
+    """診断結果。到達レベルは、正答率が 50% 以上と推定される最も高いレベル（θ の切り捨て）。
+
+    log は1問ごとの問題・自分の答え・正答（API が記録したもの）。そのまま結果の items に入れる。
+    """
     theta = estimate(responses)
     reached = math.floor(theta)
     lowest = min(t.level for t in PROBLEM_TYPES.values())
@@ -179,4 +183,5 @@ def summarize(responses: list[Response]) -> dict:
             }
             for r in sorted(wrong, key=lambda r: r.level)
         ],
+        "items": log or [],
     }

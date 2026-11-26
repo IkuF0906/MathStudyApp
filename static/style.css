@@ -695,6 +695,20 @@ code { font-family: ui-monospace, Consolas, monospace; background: var(--bg); pa
 .next-type svg { color: var(--muted); }
 @media (hover: hover) { .next-type:hover { border-color: var(--accent); } }
 #pr-missed-more { margin-top: 8px; min-height: 44px; }
+.pr-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.pr-item { padding: 10px 14px; border-radius: 12px; background: var(--surface-2); border-left: 4px solid var(--ok); }
+.pr-item.ng { border-left-color: var(--ng); }
+.pr-item-head { margin: 0; display: flex; align-items: baseline; gap: 8px; font-size: 0.85rem; }
+.pr-item-mark { font-weight: 700; color: var(--ok-ink); }
+.pr-item.ng .pr-item-mark { color: var(--ng-ink); }
+.pr-item-no { font-weight: 700; font-variant-numeric: tabular-nums; }
+.pr-item-name { min-width: 0; }
+.pr-item-lv { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pr-item-q p { margin: 6px 0 0; font-size: 0.9rem; }
+.pr-item-q .pr-item-math { overflow-x: auto; }
+.pr-item-ans { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; margin: 6px 0 0; font-size: 0.9rem; }
+.pr-item-ans dt { color: var(--muted); font-size: 0.8rem; align-self: center; }
+.pr-item-ans dd { margin: 0; overflow-x: auto; }
 .pr-levels summary { font-weight: 500; }
 .pr-levels .level-rows { margin-top: 12px; }
 .pr-levels .hint { margin: 0; font-size: 0.85rem; }
