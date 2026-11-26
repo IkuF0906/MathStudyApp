@@ -5,7 +5,10 @@
 回答ごとに θ を最尤推定（弱い事前分布つき）し直す。
 記述式なので当てずっぽうで正解する確率は 0 とみなし、補正はしない。
 
-次の問題は、直前に正解なら θ + 0.4、不正解なら θ - 0.4 に近いレベルの、まだ出していない型から選ぶ。
+次の問題のレベルは階段のように決める（推定の θ とは別）。
+- レベル 8 より下: 正解なら 3 段上がる（8 まで）。不正解なら 1 段下がる
+- レベル 8 から上: 2 問続けて正解すると 1 段上がる。不正解なら 1 段下がる
+易しいところは早く通り過ぎ、難しいところは慎重に上がるため。そのレベルに最も近い、まだ出していない型から選ぶ。
 """
 
 import math
@@ -19,7 +22,8 @@ TOTAL = 10  # 1回の診断の問題数（20問では長いので 10 問にし�
 SLOPE = 1.6  # ロジスティック曲線の傾き（レベルが1違うと正答率がどれだけ変わるか）
 START_LEVEL = 5  # 最初の問題のレベル（事前分布の中心）。中学〜数III の真ん中の数I から始める
 PRIOR_SD = 3.0  # 事前分布の標準偏差。大きいほど弱い（回答に引っ張られやすい）
-STEP = 0.4  # 次の問題を、いまの推定値からどれだけずらしたレベルで出すか
+FAST_JUMP = 3  # レベル SLOW_FROM より下で正解したときに上がる段数
+SLOW_FROM = 8  # このレベルから上は、2 問続けて正解したときだけ 1 段上がる
 GRID = [i / 20 for i in range(0, 12 * 20 + 1)]  # θ の探索範囲 0〜12 を 0.05 刻み
 MIN_LEVEL, MAX_LEVEL = 1, 10
 
@@ -73,6 +77,25 @@ def standard_error(responses: list[Response]) -> float:
     return math.sqrt(sum(w * (t - mean) ** 2 for w, t in zip(ws, GRID)) / total)
 
 
+def next_level(responses: list[Response]) -> int:
+    """次に出す問題のレベル（階段のルール。モジュールの説明を参照）。"""
+    if not responses:
+        return START_LEVEL
+    last = responses[-1]
+    top = max(t.level for t in PROBLEM_TYPES.values())
+    if not last.correct:
+        return max(MIN_LEVEL, last.level - 1)
+    if last.level < SLOW_FROM:
+        return min(last.level + FAST_JUMP, SLOW_FROM)
+    # レベル 8 から上で続けて正解した数。2 問目・4 問目…の正解で 1 段上がる
+    streak = 0
+    for r in reversed(responses):
+        if not (r.correct and r.level >= SLOW_FROM):
+            break
+        streak += 1
+    return min(last.level + 1, top) if streak % 2 == 0 else last.level
+
+
 def next_type(responses: list[Response], rng: random.Random, type_ids: list[str] | None = None) -> str:
     """次に出す問題の型。目標のレベルに最も近い未出題の型から選ぶ（同じ単元が続かないようにする）。"""
     pool_ids = type_ids if type_ids is not None else list(PROBLEM_TYPES)
@@ -80,11 +103,7 @@ def next_type(responses: list[Response], rng: random.Random, type_ids: list[str]
     pool = [PROBLEM_TYPES[t] for t in pool_ids if t not in used]
     if not pool:
         raise ValueError("出題できる型が残っていません")
-    if responses:
-        theta = estimate(responses)
-        target = theta + (STEP if responses[-1].correct else -STEP)
-    else:
-        target = START_LEVEL
+    target = next_level(responses)
     d = min(abs(t.level - target) for t in pool)
     near = [t for t in pool if abs(t.level - target) <= d + 0.5]
     # 単元が偏らないよう、これまでに出た回数が少ない単元の型を優先する

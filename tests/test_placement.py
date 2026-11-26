@@ -68,11 +68,30 @@ def test_next_item_follows_last_answer():
     assert PROBLEM_TYPES[up].level >= START_LEVEL >= PROBLEM_TYPES[down].level
 
 
+def test_next_level_staircase():
+    from drill.placement import next_level
+
+    r = lambda level, ok: Response("power", level, ok)  # noqa: E731（型は使わないので何でもよい）
+    assert next_level([]) == START_LEVEL
+    # レベル 8 より下: 正解で 3 段上がる（8 で止まる）、不正解で 1 段下がる
+    assert next_level([r(4, True)]) == 7
+    assert next_level([r(6, True)]) == 8
+    assert next_level([r(5, False)]) == 4
+    assert next_level([r(1, False)]) == 1
+    # レベル 8 から上: 2 問続けて正解して 1 段上がる
+    assert next_level([r(8, True)]) == 8
+    assert next_level([r(8, True), r(8, True)]) == 9
+    assert next_level([r(8, False), r(8, True)]) == 8
+    assert next_level([r(9, True), r(9, True)]) == 9  # いちばん上（Lv9）より上には行かない
+    assert next_level([r(9, False)]) == 8
+
+
 @pytest.mark.parametrize("true_theta", [2.0, 4.0, 6.0, 7.5, 9.0])
 def test_simulated_examinee_is_recovered(true_theta):
     estimates = [estimate(simulate(true_theta, seed)) for seed in range(RUNS)]
     assert statistics.mean(estimates) == pytest.approx(true_theta, abs=0.3)
-    assert statistics.stdev(estimates) < 0.6
+    # 10 問で、不正解では 1 段ずつしか下がらないので、低いレベルの受験者ほど推定がばらつく（θ=2 で ±0.55 ほど）
+    assert statistics.stdev(estimates) < 0.7
 
 
 def test_different_abilities_are_separated():
