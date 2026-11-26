@@ -84,7 +84,7 @@
   let busy = false;
   // 言語ごとの途中の状態（ページを行き来しても、解いている途中のテストを残す）
   const saved = {};
-  const TITLES = { ja: "漢字の語彙チェック", en: "英単語チェック" };
+  const TITLES = { ja: "日本語の語彙チェック", en: "英単語チェック" };
   const PAGES = { ja: "kanji", en: "english" };
 
   // θ の推定（事後分布の最頻値）。「わからない」は、知らない語でほぼ押されるとみなす
@@ -232,7 +232,7 @@
     const miss = ans.filter((x) => x.r !== "ok").sort((a, b) => Math.abs(a.q[2] - li) - Math.abs(b.q[2] - li) || a.q[2] - b.q[2]);
     const other = lang === "ja" ? "en" : "ja";
     const label = est < floor ? `${floor.toLocaleString()}${d.unit}未満` : `約 ${est.toLocaleString()} ${d.unit}`;
-    window.saveLast(PAGES[lang], { label: `${label}・${shortName(li)}相当` });
+    window.saveLast(PAGES[lang], { label: `${label}・${shortName(li)}相当`, level: li });
 
     $("vocab-card").innerHTML = `<p class="tile-label">知っている語の数（推定）</p>
       <p class="vocab-count">${count}</p>

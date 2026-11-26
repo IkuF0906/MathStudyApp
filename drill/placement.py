@@ -15,7 +15,7 @@ from dataclasses import dataclass
 
 from .templates import MISCONCEPTIONS, PROBLEM_TYPES, UNITS
 
-TOTAL = 20  # 1回の診断の問題数
+TOTAL = 10  # 1回の診断の問題数（20問では長いので 10 問にしている）
 SLOPE = 1.6  # ロジスティック曲線の傾き（レベルが1違うと正答率がどれだけ変わるか）
 START_LEVEL = 5  # 最初の問題のレベル（事前分布の中心）。中学〜数III の真ん中の数I から始める
 PRIOR_SD = 3.0  # 事前分布の標準偏差。大きいほど弱い（回答に引っ張られやすい）

@@ -258,24 +258,27 @@ def placement_answer(client, session_id, problem_id, text="", skip=False):
 def test_placement_runs_to_the_end(client):
     start = client.post("/api/placement/start", json={}).json()
     sid, problem = start["session_id"], start["problem"]
-    assert start["total"] == 20 and problem["index"] == 1
+    from drill.placement import TOTAL
+
+    assert TOTAL == 10
+    assert start["total"] == TOTAL and problem["index"] == 1
     seen = []
-    for i in range(1, 21):
+    for i in range(1, TOTAL + 1):
         seen.append(problem["type_id"])
         body = placement_answer(client, sid, problem["problem_id"], skip=True).json()
         assert body["correct"] is False and body["index"] == i
-        if i < 20:
+        if i < TOTAL:
             assert body["result"] is None
             problem = body["next"]
             assert problem["index"] == i + 1
     assert body["next"] is None
-    assert len(set(seen)) == 20
+    assert len(set(seen)) == TOTAL
     result = body["result"]
-    assert result["answered"] == 20 and result["correct"] == 0
+    assert result["answered"] == TOTAL and result["correct"] == 0
     assert result["label"] == "中学1年未満"
     # 診断で解いた問題は、復習の履歴にも残る
     attempts = sum(s["attempts"] for s in client.get("/api/stats").json())
-    assert attempts == 20
+    assert attempts == TOTAL
 
 
 def test_placement_grades_with_checker(client):

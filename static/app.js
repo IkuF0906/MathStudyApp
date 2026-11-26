@@ -299,7 +299,7 @@ async function submitPlacement({ answer = "", skip = false }) {
     saveLast("placement", { label: r.result.label, level: r.result.level });
   }
   refreshDueBadge();
-  // 正誤・正しい答えは出さずに、そのまま次の問題（20問目のあとは結果）へ進む
+  // 正誤・正しい答えは出さずに、そのまま次の問題（最後の問題のあとは結果）へ進む
   nextPlacementStep();
 }
 
@@ -492,11 +492,18 @@ function showHome() {
       box.append(el("span", "", `前回 ${formatDate(last.at)}`), el("span", "test-last-value", last.label));
     }
   }
-  // 数学の階段は、前回の到達レベルまで塗る（受けていなければ全体を薄く）
-  const last = loadLast("placement");
-  [...$("home-ladder").children].forEach((step, i) => {
-    step.className = last ? (i + 1 <= last.level ? "on" : i + 1 === last.level + 1 ? "next" : "") : "on";
-  });
+  // 出題範囲の階段は、前回の到達レベルまで塗り、次の段を枠だけにする（受けていなければ全体を塗る）
+  for (const test of ["placement", "kanji", "english"]) {
+    const ladder = $(`ladder-${test}`);
+    const n = Number(ladder.dataset.steps);
+    const level = loadLast(test)?.level;
+    ladder.innerHTML = "";
+    for (let i = 1; i <= n; i++) {
+      const step = el("span", level == null || i <= level ? "on" : i === level + 1 ? "next" : "");
+      step.style.height = `${20 + ((i - 1) * 80) / (n - 1)}%`;
+      ladder.appendChild(step);
+    }
+  }
 }
 
 const ICON_CHECK = '<svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>';

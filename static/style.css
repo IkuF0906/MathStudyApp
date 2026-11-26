@@ -239,7 +239,12 @@ main { max-width: 1320px; margin: 0 auto; padding: 20px 24px 48px; }
 .home-hero { margin: 8px 0 18px; }
 .home-hero h2 { margin: 0 0 6px; font-size: 1.75rem; font-weight: 700; line-height: 1.3; text-wrap: balance; }
 .home-hero .hint { margin: 0; }
-.test-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; align-items: start; }
+/* 数学のカードと、語彙（日本語・英語）のまとまりを並べる。狭い画面では縦に積む */
+.test-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; align-items: start; }
+.vocab-group { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 18px; background: var(--surface-2); border: 1px solid var(--border); }
+.vocab-group-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 2px 4px; }
+.vocab-group-head h3 { margin: 0; font-size: 1.2rem; font-weight: 700; }
+.vocab-group .test-card { padding: 14px 16px; }
 .test-card {
   --c: var(--math);
   --c-tint: var(--math-tint);
@@ -265,9 +270,6 @@ main { max-width: 1320px; margin: 0 auto; padding: 20px 24px 48px; }
 /* 数学の出題範囲（中学1年〜数III）の階段。前回の到達レベルまで塗る */
 .ladder { display: flex; align-items: flex-end; gap: 4px; height: 38px; }
 .ladder span { flex: 1; border-radius: 3px; background: var(--step-off); }
-.ladder span:nth-child(1) { height: 20%; } .ladder span:nth-child(2) { height: 30%; } .ladder span:nth-child(3) { height: 40%; }
-.ladder span:nth-child(4) { height: 50%; } .ladder span:nth-child(5) { height: 60%; } .ladder span:nth-child(6) { height: 70%; }
-.ladder span:nth-child(7) { height: 80%; } .ladder span:nth-child(8) { height: 90%; } .ladder span:nth-child(9) { height: 100%; }
 .ladder span.on { background: var(--c); }
 .ladder span.next { background: var(--c-tint); box-shadow: inset 0 0 0 1.5px var(--c); }
 .ladder-ends { display: flex; justify-content: space-between; margin-top: -8px; font-size: 0.72rem; color: var(--muted); }

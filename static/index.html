@@ -36,7 +36,7 @@
       </div>
       <nav class="tabs" aria-label="診断テスト">
         <button class="tab" data-tab="placement">数学</button>
-        <button class="tab" data-tab="kanji">漢字</button>
+        <button class="tab" data-tab="kanji">日本語</button>
         <button class="tab" data-tab="english">英語</button>
       </nav>
     </div>
@@ -50,8 +50,8 @@
     <nav aria-label="すべてのページ">
       <p class="drawer-group">診断テスト</p>
       <button type="button" class="nav-item" data-tab="home">トップ<small>3つの診断から選ぶ</small></button>
-      <button type="button" class="nav-item" data-tab="placement">数学レベル診断<small>20問で到達レベル（中学1年〜数III）を推定</small></button>
-      <button type="button" class="nav-item" data-tab="kanji">漢字の語彙チェック<small>漢検の級を目安に、知っている語の数を推定</small></button>
+      <button type="button" class="nav-item" data-tab="placement">数学レベル診断<small>10問で到達レベル（中学1年〜数III）を推定</small></button>
+      <button type="button" class="nav-item" data-tab="kanji">日本語の語彙チェック<small>漢検の級を目安に、知っている語の数を推定</small></button>
       <button type="button" class="nav-item" data-tab="english">英単語チェック<small>英検の級を目安に、知っている語の数を推定</small></button>
       <p class="drawer-group">数学ドリル</p>
       <button type="button" class="nav-item" data-tab="practice">練習<small>単元と問題の型を選んで解く</small></button>
@@ -71,39 +71,46 @@
     </div>
     <section id="home-page" hidden aria-labelledby="home-title">
       <div class="home-hero">
-        <h2 id="home-title">いまの実力を、20問で。</h2>
+        <h2 id="home-title">いまの実力を、短い問題で。</h2>
         <p class="hint">正解すると難しく、間違えると易しく。答えに合わせて問題が変わる診断テストです。</p>
       </div>
       <div class="test-cards">
         <button type="button" class="test-card subject-math" data-go="placement">
           <span class="test-card-head">
             <span class="subject-icon" aria-hidden="true">数</span>
-            <span class="test-card-title"><span class="test-name">数学</span><span class="test-meta">記述式・20問・約25分</span></span>
+            <span class="test-card-title"><span class="test-name">数学</span><span class="test-meta">記述式・10問・約12分</span></span>
             <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
           </span>
-          <span class="ladder" id="home-ladder" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span>
+          <span class="ladder" id="ladder-placement" data-steps="9" aria-hidden="true"></span>
           <span class="ladder-ends" aria-hidden="true"><span>中学1年</span><span>数III</span></span>
-          <span class="test-desc">中学1年〜数III のどこまで解けるか。間違えやすい所も分かります。</span>
           <span class="test-last" id="last-placement" hidden></span>
         </button>
-        <button type="button" class="test-card subject-kanji" data-go="kanji">
-          <span class="test-card-head">
-            <span class="subject-icon" aria-hidden="true">漢</span>
-            <span class="test-card-title"><span class="test-name">漢字</span><span class="test-meta">4択・20問・約3分</span></span>
-            <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
-          </span>
-          <span class="test-desc">語の意味をどれだけ知っているか。漢検10級〜1級を目安に、知っている語の数を推定します。</span>
-          <span class="test-last" id="last-kanji" hidden></span>
-        </button>
-        <button type="button" class="test-card subject-english" data-go="english">
-          <span class="test-card-head">
-            <span class="subject-icon" aria-hidden="true">A</span>
-            <span class="test-card-title"><span class="test-name">英語</span><span class="test-meta">4択・20問・約3分</span></span>
-            <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
-          </span>
-          <span class="test-desc">英単語の意味をどれだけ知っているか。中学〜英検1級を目安に推定します。</span>
-          <span class="test-last" id="last-english" hidden></span>
-        </button>
+        <section class="vocab-group" aria-labelledby="vocab-group-title">
+          <div class="vocab-group-head">
+            <h3 id="vocab-group-title">語彙</h3>
+            <span class="test-meta">4択・20問・約3分ずつ</span>
+          </div>
+          <button type="button" class="test-card subject-kanji" data-go="kanji">
+            <span class="test-card-head">
+              <span class="subject-icon" aria-hidden="true">日</span>
+              <span class="test-card-title"><span class="test-name">日本語</span><span class="test-meta">漢字の語の意味・漢検10級〜1級が目安</span></span>
+              <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+            </span>
+            <span class="ladder" id="ladder-kanji" data-steps="11" aria-hidden="true"></span>
+            <span class="ladder-ends" aria-hidden="true"><span>漢検10級</span><span>1級</span></span>
+            <span class="test-last" id="last-kanji" hidden></span>
+          </button>
+          <button type="button" class="test-card subject-english" data-go="english">
+            <span class="test-card-head">
+              <span class="subject-icon" aria-hidden="true">A</span>
+              <span class="test-card-title"><span class="test-name">英語</span><span class="test-meta">英単語の意味・中学〜英検1級が目安</span></span>
+              <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+            </span>
+            <span class="ladder" id="ladder-english" data-steps="10" aria-hidden="true"></span>
+            <span class="ladder-ends" aria-hidden="true"><span>中学基礎</span><span>英検1級より上</span></span>
+            <span class="test-last" id="last-english" hidden></span>
+          </button>
+        </section>
       </div>
       <section class="home-drill" aria-labelledby="home-drill-title">
         <h3 id="home-drill-title">数学ドリル</h3>
@@ -132,7 +139,7 @@
 
       <section class="pane placement-intro" id="placement-intro" hidden aria-labelledby="placement-title">
         <h2 id="placement-title">あなたの数学の到達レベルは？</h2>
-        <p>全20問の記述式テストで、到達レベル（中学1年 〜 数III）を推定します。最初は数I の問題から始まり、正解すると難しい問題、間違えると易しい問題が出ます。途中では正誤を表示せず、20問を解き終えたあとにまとめて結果を出します。</p>
+        <p>全10問の記述式テストで、到達レベル（中学1年 〜 数III）を推定します。最初は数I の問題から始まり、正解すると難しい問題、間違えると易しい問題が出ます。途中では正誤を表示せず、10問を解き終えたあとにまとめて結果を出します。</p>
         <p class="hint">解けない問題は「わからない」を押して先へ進めます。結果では、レベルごとの正答と、よく出た間違いのパターンを確認できます。所要時間はおよそ20〜30分です。</p>
         <p class="error" id="placement-error" role="alert" hidden></p>
         <button type="button" id="placement-start" class="primary">診断をはじめる</button>
@@ -285,7 +292,7 @@
     <section id="vocab" hidden aria-labelledby="vocab-title">
       <div class="vocab-head">
         <div>
-          <h2 id="vocab-title">漢字の語彙チェック</h2>
+          <h2 id="vocab-title">日本語の語彙チェック</h2>
           <p class="hint">単語の意味を4つの中から選んでください。全20問で、正解すると難しい語、間違えると易しい語が出ます。知らない語は「わからない」を押すと推定が正確になります。正誤は20問を終えたあとにまとめて出します。</p>
         </div>
       </div>
