@@ -51,8 +51,8 @@
       <p class="drawer-group">診断テスト</p>
       <button type="button" class="nav-item" data-tab="home">トップ<small>3つの診断から選ぶ</small></button>
       <button type="button" class="nav-item" data-tab="placement">数学レベル診断<small>10問で到達レベル（中学1年〜数III）を推定</small></button>
-      <button type="button" class="nav-item" data-tab="kanji">日本語の語彙チェック<small>漢検の級を目安に、知っている語の数を推定</small></button>
-      <button type="button" class="nav-item" data-tab="english">英単語チェック<small>英検の級を目安に、知っている語の数を推定</small></button>
+      <button type="button" class="nav-item" data-tab="kanji">日本語の語彙チェック<small>漢検の級で、語彙のレベルを推定</small></button>
+      <button type="button" class="nav-item" data-tab="english">英単語チェック<small>CEFR のレベルと、知っている語の数を推定</small></button>
       <p class="drawer-group">数学ドリル</p>
       <button type="button" class="nav-item" data-tab="practice">練習<small>単元と問題の型を選んで解く</small></button>
       <button type="button" class="nav-item" data-tab="review"><span class="nav-title">復習<span class="badge" id="due-badge" aria-hidden="true" hidden></span><span class="visually-hidden" id="due-badge-label"></span></span><small>期限が来た型・苦手な型を解く</small></button>
@@ -93,21 +93,21 @@
           <button type="button" class="test-card subject-kanji" data-go="kanji">
             <span class="test-card-head">
               <span class="subject-icon" aria-hidden="true">日</span>
-              <span class="test-card-title"><span class="test-name">日本語</span><span class="test-meta">漢字の語の意味・漢検10級〜1級が目安</span></span>
+              <span class="test-card-title"><span class="test-name">日本語</span><span class="test-meta">漢字の語の意味・漢検の級で判定</span></span>
               <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
             </span>
             <span class="ladder" id="ladder-kanji" data-steps="11" aria-hidden="true"></span>
-            <span class="ladder-ends" aria-hidden="true"><span>漢検10級</span><span>1級</span></span>
+            <span class="ladder-ends" aria-hidden="true"><span>漢検10級</span><span>準1級以上</span></span>
             <span class="test-last" id="last-kanji" hidden></span>
           </button>
           <button type="button" class="test-card subject-english" data-go="english">
             <span class="test-card-head">
               <span class="subject-icon" aria-hidden="true">A</span>
-              <span class="test-card-title"><span class="test-name">英語</span><span class="test-meta">英単語の意味・中学〜英検1級が目安</span></span>
+              <span class="test-card-title"><span class="test-name">英語</span><span class="test-meta">英単語の意味・CEFR（英検・TOEIC の目安つき）</span></span>
               <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
             </span>
-            <span class="ladder" id="ladder-english" data-steps="10" aria-hidden="true"></span>
-            <span class="ladder-ends" aria-hidden="true"><span>中学基礎</span><span>英検1級より上</span></span>
+            <span class="ladder" id="ladder-english" data-steps="7" aria-hidden="true"></span>
+            <span class="ladder-ends" aria-hidden="true"><span>CEFR A1</span><span>C2より上</span></span>
             <span class="test-last" id="last-english" hidden></span>
           </button>
         </section>

@@ -1,0 +1,75 @@
+# 語彙チェックのレベルと、その根拠
+
+日本語（漢字）と英語の語彙チェックで、語のレベル・画面に出す級や点数をどう決めているかと、その出典をまとめる。
+CLAUDE.md の決まりのとおり、級や点数との対応は公式または公開されている資料を根拠にし、ここに書き残す。
+
+## 日本語（漢字の語）
+
+### 語のレベルの決め方
+
+語に使われている漢字のうち、**最も高い漢検の級**をその語のレベルとする。
+
+| レベル | 漢検の級 | 対象の漢字 |
+|---|---|---|
+| 1〜6 | 10級〜5級 | 小学1〜6年の配当漢字（学年別漢字配当表） |
+| 7〜10 | 4級・3級・準2級・2級 | 中学・高校で習う常用漢字 |
+| 11 | 準1級以上 | 級別漢字表にない漢字（常用漢字の外） |
+
+- 出典: 公益財団法人 日本漢字能力検定協会『[日本漢字能力検定 級別漢字表（10級～2級）](https://www.kanken.or.jp/kanken/outline/data/outline_degree_national_list20200217.pdf)』2020年2月発表（2020年度からの配当）。
+  10〜5級は、小学校学習指導要領（2020年度全面実施）の学年別漢字配当表によると表に書かれている。
+- 表の漢字は `tests/data/kanken_2020.json` に保存し、`tests/test_vocab.py` が全語のレベルを表と照らし合わせる。
+  - PDF の漢字は Adobe-Japan1 の文字番号（CID）で入っているため、Adobe の対応表
+    （[Adobe-Japan1-UCS2](https://github.com/adobe-type-tools/mapping-resources-pdf/blob/master/pdf2unicode/Adobe-Japan1-UCS2)）で漢字に戻して読み取った。
+  - 読み取った字数は各級とも公式の字数（10級 80字 … 2級 185字、合計 2,136字＝常用漢字の字数）と一致する。
+- 準1級・1級の配当漢字は公開の表がない（書籍『漢検要覧 1/準1級対応』にのみ載っている）ため、準1級と1級は分けず「準1級以上」にまとめている。
+
+### 画面に出すもの
+
+- 結果は「漢検○級相当」だけを出す。日本語の「知っている語の数」には根拠にできる公開の資料が見つからないため、語数は出さない。
+- 漢検の級は「その級の漢字を使った語の意味が分かるか」の目安で、漢検の合否（読み書き）を判定するものではないことを画面にも書いている。
+
+## 英語（英単語）
+
+### 語のレベルの決め方
+
+語のレベルは CEFR とし、次の公開リストで品詞（名詞・動詞・形容詞）ごとに引く。どちらにもない語は「C2より上」とする。
+
+| レベル | CEFR | リスト | リストの語数 |
+|---|---|---|---|
+| 1 | A1 | CEFR-J Wordlist ver1.5 | 1,164 |
+| 2 | A2 | 同上 | 1,411 |
+| 3 | B1 | 同上 | 2,446 |
+| 4 | B2 | 同上 | 2,778 |
+| 5 | C1 | Octanove Vocabulary Profile C1/C2 ver1.0 | 1,111 |
+| 6 | C2 | 同上 | 1,025 |
+| 7 | C2より上 | どちらのリストにもない語 | — |
+
+- 出典: [Open Language Profiles — English datasets from CEFR-J](https://github.com/openlanguageprofiles/olp-en-cefrj)
+  - The CEFR-J Wordlist Version 1.5. Compiled by Yukio Tono, Tokyo University of Foreign Studies.（出典を示せば研究・商用とも無償で利用可）
+  - Octanove Vocabulary Profile C1/C2 (ver 1.0), Octanove Labs.（[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)）
+- 確認: `python -m scripts.check_vocab_levels` で、全語のレベルがリストどおりかを確かめられる（リストを GitHub から読み込むので CI では動かさない）。
+
+### 英検・TOEIC との対応（目安）
+
+語彙の CEFR レベルを、各試験の公式の CEFR 対応表に当てはめて「目安」として出す。語彙だけで試験の級や点数が決まるわけではない。
+
+| CEFR | 英検（その級の合格で算出できる上限の CEFR） | TOEIC L&R（その CEFR の最低点の合計） |
+|---|---|---|
+| A1 | 3級 | 120点（L 60・R 60） |
+| A2 | 準2級 | 225点（L 110・R 115） |
+| B1 | 2級 | 550点（L 275・R 275） |
+| B2 | 準1級 | 785点（L 400・R 385） |
+| C1 | 1級 | 945点（L 490・R 455） |
+| C2 | 1級より上 | 対応する点数なし |
+
+- 英検: 公益財団法人 日本英語検定協会「[英検CSEスコアとは](https://www.eiken.or.jp/cse/)」の「CEFRレベルと英検CSEスコアの対応」
+  （C1 は1級、B2 は準1級・1級、B1 は2級・準1級、A2 は準2級・準2級プラス・2級、A1 は3級・準2級・準2級プラスで算出できる。4級・5級は CEFR の算出範囲外）と、
+  同協会『[英検ライティングスコアとCEFRレベル対応付け 調査報告書](https://www.eiken.or.jp/eiken/group/result/pdf/eiken-score-cefr.pdf)』（2018年2月）。
+- TOEIC: ETS『[Mapping the TOEIC tests on the CEFR](https://www.ets.org/pdfs/toeic/toeic-mapping-cefr-reference.pdf)』（Tannenbaum & Wylie による基準設定の研究。ETS 自身が「目安で、厳密な合格点として使わないこと」としている）。
+
+### 語数（知っている語の数）
+
+- 「各 CEFR レベルのリストの語数 × そのレベルの語を知っていると推定される確率」の合計を、100語単位で出す。
+  C2 より上の語は数えない。リストの語数から計算した**民間の目安**であることを画面に書いている。
+- 参考: 英検の級ごとの「必要語数」（3級 2,100語、2級 5,000語など）は英検協会が定めた数字ではなく、
+  予備校・学習サイトの推定で、サイトによって数字が違う（例: [ei-raku](https://ei-raku.com/2017/11/exam-eiken-comparison/amp/)・[moocota](https://www.moocota.com/eiken-tango/)）。そのため画面には使っていない。
