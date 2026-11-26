@@ -105,6 +105,9 @@ def test_summary():
     assert s["misconceptions"][0]["count"] == 2
     assert s["unclassified_wrong"] == 1
     assert [m["level"] for m in s["missed"]] == [8, 8, 8]
+    # 4問とも微分の単元。出題しなかった単元は名前だけを返す
+    assert s["by_unit"] == [{"unit_id": "derivative", "unit_name": "微分", "attempts": 4, "correct": 1}]
+    assert "微分" not in s["untested_units"] and "三角比" in s["untested_units"]
 
 
 def test_summary_labels():

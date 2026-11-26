@@ -123,6 +123,13 @@ def summarize(responses: list[Response]) -> dict:
         )
     mistakes = Counter(r.misconception_id for r in responses if not r.correct and r.misconception_id)
     wrong = [r for r in responses if not r.correct]
+    # 単元ごとの手ごたえ（出題した単元だけ。並びは単元の定義の順）
+    by_unit = []
+    for uid, unit in UNITS.items():
+        rs = [r for r in responses if PROBLEM_TYPES[r.type_id].unit == uid]
+        if rs:
+            by_unit.append({"unit_id": uid, "unit_name": unit.name, "attempts": len(rs), "correct": sum(r.correct for r in rs)})
+    asked = {u["unit_id"] for u in by_unit}
     return {
         "theta": round(theta, 2),
         "se": round(standard_error(responses), 2),
@@ -131,6 +138,8 @@ def summarize(responses: list[Response]) -> dict:
         "answered": len(responses),
         "correct": sum(r.correct for r in responses),
         "by_level": by_level,
+        "by_unit": by_unit,
+        "untested_units": [unit.name for uid, unit in UNITS.items() if uid not in asked],
         "misconceptions": [
             {
                 "id": mid,

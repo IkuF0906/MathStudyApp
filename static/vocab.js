@@ -129,6 +129,7 @@
 
   function intro() {
     const d = T[lang];
+    window.hideTestbar();
     $("vocab-card").innerHTML = `<div class="vocab-start">
       <p>${d.name}・全${N}問（約3分）／レベル1〜${maxL()}</p>
       <button type="button" class="primary" id="vocab-begin">はじめる</button></div>`;
@@ -154,12 +155,12 @@
       opts = options(q);
     }
     cur = { q, opts };
-    $("vocab-card").innerHTML = `<div class="vocab-prog"><span>${ans.length + 1} / ${N} 問目</span><span>${d.name}</span></div>
-      <div class="bar"><span style="width:${(ans.length / N) * 100}%"></span></div>
-      <div class="vocab-word vocab-${lang}" lang="${lang}">${esc(q[0])}</div>
+    window.showTestbar(ans.length + 1, N, PAGES[lang]);
+    $("vocab-card").innerHTML = `<div class="vocab-word vocab-${lang}" lang="${lang}">${esc(q[0])}</div>
       <p class="vocab-q">${d.q}</p>
       <div class="vocab-opts">${opts.map((o, k) => `<button type="button" class="vocab-opt" data-k="${k}"><span class="vocab-key">${k + 1}</span>${esc(o)}</button>`).join("")}</div>
-      <button type="button" class="vocab-idk" id="vocab-idk">わからない <span class="vocab-key">0</span></button>`;
+      <button type="button" class="vocab-idk" id="vocab-idk">わからない <span class="vocab-key">0</span></button>
+      <p class="vocab-after">選ぶとすぐ次の問題へ進みます。正誤は20問のあとにまとめて出します。</p>`;
     $("vocab-card").querySelectorAll(".vocab-opt").forEach((b) => b.addEventListener("click", () => pick(opts[+b.dataset.k], b)));
     $("vocab-idk").addEventListener("click", () => pick(null, null));
   }
@@ -183,15 +184,42 @@
     }, 300);
   }
 
+  // 級の名前を短くする（漢検準2級（高校） → 漢検準2級、中学基礎（〜1,000語） → 中学基礎）
+  const shortName = (L) => T[lang].levels[L][0].replace(/（.*$/, "");
+
   function result() {
+    window.hideTestbar();
     const d = T[lang];
     const M = maxL();
     let total = 0;
     for (let L = 1; L <= M; L++) total += d.levels[L][1] * pk(theta, L);
     const step = lang === "ja" ? 1000 : 100;
+    const floor = lang === "ja" ? 1000 : 500; // これより少ない推定は「〜未満」と出す（0語のような極端な値を出さない）
     const est = Math.round(total / step) * step;
     const lv = Math.max(1, Math.min(M, theta));
     const li = Math.max(1, Math.min(M, Math.floor(lv + 0.5)));
+    const count = est < floor
+      ? `<span class="vocab-count-num">${floor.toLocaleString()}</span><span>${d.unit}未満</span>`
+      : `<span>約</span><span class="vocab-count-num">${est.toLocaleString()}</span><span>${d.unit}</span>`;
+
+    // 物差し: 全レベルを横に並べ、自分のレベルに印
+    const scale = [];
+    for (let L = 1; L <= M; L++) scale.push(`<span class="${L < li ? "done" : L === li ? "here" : ""}"></span>`);
+
+    // 級ごとに知っている割合: 自分のレベルの前後だけを細かく、遠いところはまとめる
+    const avg = (a, b) => {
+      let t = 0;
+      for (let L = a; L <= b; L++) t += pk(theta, L);
+      return Math.round((t / (b - a + 1)) * 100);
+    };
+    const groups = [];
+    if (li - 2 >= 1) groups.push([`${shortName(li - 2)}まで`, avg(1, li - 2)]);
+    for (let L = Math.max(1, li - 1); L <= Math.min(M, li + 1); L++) groups.push([shortName(L), avg(L, L), L === li]);
+    if (li + 2 <= M) groups.push([`${shortName(li + 2)}から上`, avg(li + 2, M)]);
+    const groupRows = groups
+      .map(([name, p, me]) => `<span class="${me ? "me" : ""}">${esc(name)}</span><span class="bar"><span style="width:${p}%"></span></span><span class="${me ? "me" : ""}">${p}%</span>`)
+      .join("");
+
     const rows = [];
     for (let L = 1; L <= M; L++) {
       const a = ans.filter((x) => x.q[2] === L);
@@ -200,25 +228,52 @@
         <div class="bar" aria-label="知っている割合の推定 ${p}%"><span style="width:${p}%"></span></div>
         <span class="n">${a.length ? `${a.filter((x) => x.r === "ok").length}/${a.length}` : "–"}</span></div>`);
     }
-    const miss = ans.filter((x) => x.r !== "ok").sort((a, b) => a.q[2] - b.q[2]);
+    // 覚えておきたい語: いまのレベルに近い語から5つ。残りは「すべて見る」で開く
+    const miss = ans.filter((x) => x.r !== "ok").sort((a, b) => Math.abs(a.q[2] - li) - Math.abs(b.q[2] - li) || a.q[2] - b.q[2]);
     const other = lang === "ja" ? "en" : "ja";
-    $("vocab-card").innerHTML = `<p class="tile-label">推定語彙数（${d.name}）</p>
-      <p class="vocab-count">${est.toLocaleString()}<small>${d.unit}</small></p>
-      <p class="placement-theta">レベル ${lv.toFixed(1)}・${d.levels[li][0]}相当</p>
-      <h3>レベル別の正答</h3>
-      <div class="level-rows">${rows.join("")}</div>
-      <p class="hint">棒の長さは、そのレベルの語を知っていると推定される割合です。右の数字は実際の正答数です。当てずっぽうで正解する確率（4分の1）を考慮して推定しています。</p>
-      ${miss.length ? `<h3>覚えておきたい語</h3><ul class="vocab-review">${miss.map((x) => `<li><b lang="${lang}">${esc(x.q[0])}</b><span>${esc(x.q[1])}</span><i>Lv${x.q[2]}</i></li>`).join("")}</ul>` : ""}
-      <div class="placement-actions"><button type="button" class="primary" id="vocab-again">もう一度</button>
-      <button type="button" id="vocab-other">${TITLES[other]}へ</button></div>`;
+    const label = est < floor ? `${floor.toLocaleString()}${d.unit}未満` : `約 ${est.toLocaleString()} ${d.unit}`;
+    window.saveLast(PAGES[lang], { label: `${label}・${shortName(li)}相当` });
+
+    $("vocab-card").innerHTML = `<p class="tile-label">知っている語の数（推定）</p>
+      <p class="vocab-count">${count}</p>
+      <p class="vocab-level">${esc(d.levels[li][0])}相当</p>
+      <div class="vocab-scale" role="img" aria-label="${M}段のうち${li}段目">${scale.join("")}</div>
+      <div class="vocab-scale-ends" aria-hidden="true"><span>${esc(shortName(1))}</span><span>${esc(shortName(M))}</span></div>
+      <h3>級ごとに知っている割合</h3>
+      <div class="vocab-groups">${groupRows}</div>
+      <details class="vocab-detail"><summary>級ごとの内訳と実際の正答数</summary>
+        <div class="level-rows">${rows.join("")}</div>
+        <p class="hint">棒の長さは、そのレベルの語を知っていると推定される割合です。右の数字は実際の正答数です。当てずっぽうで正解する確率（4分の1）を考慮して推定しています。</p>
+      </details>
+      ${miss.length ? `<h3>覚えておきたい語</h3><ul class="vocab-review">${miss.map((x, i) => `<li${i >= 5 ? " hidden" : ""}><b lang="${lang}">${esc(x.q[0])}</b><span>${esc(x.q[1])}</span><i>Lv${x.q[2]}</i></li>`).join("")}</ul>
+        ${miss.length > 5 ? `<button type="button" class="link" id="vocab-more">すべて見る（${miss.length}語）</button>` : ""}` : ""}
+      <div class="placement-actions"><button type="button" class="primary" id="vocab-other">${TITLES[other]}もする</button>
+      <button type="button" id="vocab-again">もう一度受ける</button></div>`;
     $("vocab-again").addEventListener("click", begin);
     $("vocab-other").addEventListener("click", () => switchTab(PAGES[other]));
+    $("vocab-more")?.addEventListener("click", () => {
+      $("vocab-card").querySelectorAll(".vocab-review li").forEach((li) => (li.hidden = false));
+      $("vocab-more").remove();
+    });
     window.scrollTo({ top: 0, behavior: reduceMotion() ? "auto" : "smooth" });
   }
 
+  // トップのカード用: そのテストを途中まで解いていれば「7 / 20」のような文字列、なければ null
+  window.vocabInProgress = (page) => {
+    const l = page === "kanji" ? "ja" : "en";
+    const st = l === lang ? { ans, cur } : saved[l];
+    if (!st || !st.ans || st.ans.length >= N) return null;
+    return `${st.ans.length + 1} / ${N} 問目`;
+  };
+
   // 漢字・英語のページを開いたとき（app.js の switchTab から呼ぶ）。途中のテストはそのまま残す
   window.showVocab = (l) => {
-    if (l === lang) return;
+    $("vocab").dataset.subject = PAGES[l];
+    if (l === lang) {
+      // 同じページに戻ってきた: 解いている途中なら、上の帯（集中モード）を出し直す
+      if (ans && ans.length < N) window.showTestbar(ans.length + 1, N, PAGES[l]);
+      return;
+    }
     if (lang) saved[lang] = { used, ans, cur, theta };
     lang = l;
     $("vocab-title").textContent = TITLES[l];

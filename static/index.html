@@ -9,7 +9,7 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%238ccdd9%22/%3E%3Cpath d=%22M6 26v-6h6.5v-6.5H19V7h7v19Z%22 fill=%22%232a3138%22/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Shippori+Mincho:wght@600&display=swap">
   <!-- CDN の中身がすり替えられても実行しないよう、ハッシュ（SRI）を付ける -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous" referrerpolicy="no-referrer">
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -61,33 +61,58 @@
   </dialog>
 
   <main>
+    <!-- 診断の出題中だけ出す上の帯（中断ボタンと進み具合）。このときは上部のタブやメニューを隠す -->
+    <div class="testbar" id="testbar" hidden>
+      <button type="button" class="testbar-quit" id="testbar-quit" aria-label="診断を中断してトップへ戻る（続きから再開できます）">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+      <div class="testbar-track" id="testbar-track" role="progressbar" aria-valuemin="0" aria-valuemax="20" aria-valuenow="0"><span id="testbar-fill"></span></div>
+      <span class="testbar-count" id="testbar-count"></span>
+    </div>
     <section id="home-page" hidden aria-labelledby="home-title">
-      <h2 id="home-title">どの診断を受けますか</h2>
-      <p class="hint">どれも20問です。正解すると難しい問題、間違えると易しい問題が出て、いまの到達レベルを推定します。</p>
-      <ul class="test-list">
-        <li>
-          <button type="button" class="test-row" data-go="placement">
-            <span class="test-name">数学</span>
-            <span class="test-desc">中学1年〜数III のどこまで解けるか。間違えやすい所も分かります</span>
-            <span class="test-meta">記述式・約25分</span>
-          </button>
-        </li>
-        <li>
-          <button type="button" class="test-row" data-go="kanji">
-            <span class="test-name">漢字</span>
-            <span class="test-desc">漢字の語の意味をどれだけ知っているか。漢検10級〜1級が目安です</span>
-            <span class="test-meta">4択・約3分</span>
-          </button>
-        </li>
-        <li>
-          <button type="button" class="test-row" data-go="english">
-            <span class="test-name">英語</span>
-            <span class="test-desc">英単語の意味をどれだけ知っているか。中学〜英検1級が目安です</span>
-            <span class="test-meta">4択・約3分</span>
-          </button>
-        </li>
-      </ul>
-      <p class="hint home-drill">数学は、単元ごとの練習・復習もできます（左上の三本線のボタンから）。</p>
+      <div class="home-hero">
+        <h2 id="home-title">いまの実力を、20問で。</h2>
+        <p class="hint">正解すると難しく、間違えると易しく。答えに合わせて問題が変わる診断テストです。</p>
+      </div>
+      <div class="test-cards">
+        <button type="button" class="test-card subject-math" data-go="placement">
+          <span class="test-card-head">
+            <span class="subject-icon" aria-hidden="true">数</span>
+            <span class="test-card-title"><span class="test-name">数学</span><span class="test-meta">記述式・20問・約25分</span></span>
+            <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+          </span>
+          <span class="ladder" id="home-ladder" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span>
+          <span class="ladder-ends" aria-hidden="true"><span>中学1年</span><span>数III</span></span>
+          <span class="test-desc">中学1年〜数III のどこまで解けるか。間違えやすい所も分かります。</span>
+          <span class="test-last" id="last-placement" hidden></span>
+        </button>
+        <button type="button" class="test-card subject-kanji" data-go="kanji">
+          <span class="test-card-head">
+            <span class="subject-icon" aria-hidden="true">漢</span>
+            <span class="test-card-title"><span class="test-name">漢字</span><span class="test-meta">4択・20問・約3分</span></span>
+            <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+          </span>
+          <span class="test-desc">語の意味をどれだけ知っているか。漢検10級〜1級を目安に、知っている語の数を推定します。</span>
+          <span class="test-last" id="last-kanji" hidden></span>
+        </button>
+        <button type="button" class="test-card subject-english" data-go="english">
+          <span class="test-card-head">
+            <span class="subject-icon" aria-hidden="true">A</span>
+            <span class="test-card-title"><span class="test-name">英語</span><span class="test-meta">4択・20問・約3分</span></span>
+            <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+          </span>
+          <span class="test-desc">英単語の意味をどれだけ知っているか。中学〜英検1級を目安に推定します。</span>
+          <span class="test-last" id="last-english" hidden></span>
+        </button>
+      </div>
+      <section class="home-drill" aria-labelledby="home-drill-title">
+        <h3 id="home-drill-title">数学ドリル</h3>
+        <div class="drill-links">
+          <button type="button" data-go="practice">練習</button>
+          <button type="button" data-go="review">復習<span class="badge" id="home-due-badge" aria-hidden="true" hidden></span></button>
+          <button type="button" data-go="stats">成績</button>
+        </div>
+      </section>
     </section>
 
     <section id="drill">
@@ -113,10 +138,6 @@
         <button type="button" id="placement-start" class="primary">診断をはじめる</button>
       </section>
 
-      <div class="placement-progress" id="placement-progress" hidden>
-        <div class="placement-progress-text"><span id="placement-count"></span></div>
-        <div class="bar"><span id="placement-bar"></span></div>
-      </div>
 
       <div class="workspace" id="problem-card" hidden>
         <section class="pane problem-pane" aria-label="問題">
@@ -181,7 +202,7 @@
             <div class="math-buttons" id="math-buttons" role="group" aria-label="数式の入力ボタン"></div>
             <div class="answer-actions">
               <button type="button" id="toggle-input" class="link">テキストで入力する</button>
-              <button type="button" id="placement-skip" class="link" hidden>わからない（次へ）</button>
+              <button type="button" id="placement-skip" class="skip-button" hidden>わからない</button>
               <button id="open-guide" type="button" class="link guide-link">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"/><path d="M12 17h.01"/></svg>
                 入力方法
@@ -223,27 +244,41 @@
     </section>
 
     <section id="placement-result" hidden aria-labelledby="placement-result-title" aria-live="polite">
-      <div class="pane placement-summary">
+      <div class="pane pr-hero">
         <p class="tile-label" id="placement-result-title">あなたの到達レベル</p>
         <p class="placement-label" id="pr-label"></p>
-        <p class="placement-theta" id="pr-theta"></p>
+        <div class="stairs" id="pr-stairs" role="img"></div>
+        <div class="stairs-labels" id="pr-stairs-labels" aria-hidden="true"></div>
+        <p class="hint" id="pr-stairs-note"></p>
       </div>
-      <section class="pane" aria-labelledby="pr-levels-title">
-        <h2 id="pr-levels-title">レベル別の正答</h2>
-        <div class="level-rows" id="pr-levels"></div>
-        <p class="hint">棒の長さは、そのレベルの問題に正解できると推定される割合です。右の数字は実際の正答数です。</p>
+      <div class="pr-stats">
+        <div class="pane stat"><span class="stat-label">正解</span><span class="stat-value" id="pr-correct"></span></div>
+        <div class="pane stat"><span class="stat-label">推定レベル</span><span class="stat-value" id="pr-theta"></span></div>
+        <div class="pane stat"><span class="stat-label">かかった時間</span><span class="stat-value" id="pr-time"></span></div>
+      </div>
+      <section class="pane pr-section" aria-labelledby="pr-units-title">
+        <h2 id="pr-units-title">単元ごとの手ごたえ</h2>
+        <div class="unit-map" id="pr-units"></div>
+        <p class="unit-legend"><span>◎ できている</span><span>△ あと少し</span><span>✕ つまずいた</span><span>・ 今回は出題なし</span></p>
       </section>
-      <section class="pane weak" id="pr-mistakes-box" aria-labelledby="pr-mistakes-title">
-        <h2 id="pr-mistakes-title">よく出た間違いのパターン</h2>
+      <section class="pane pr-section" id="pr-mistakes-box" aria-labelledby="pr-mistakes-title">
+        <h2 id="pr-mistakes-title">よく出た間違い</h2>
         <div id="pr-mistakes"></div>
       </section>
-      <section class="pane weak" id="pr-missed-box" aria-labelledby="pr-missed-title">
-        <h2 id="pr-missed-title">復習しておきたい型</h2>
+      <section class="pane pr-section" id="pr-missed-box" aria-labelledby="pr-missed-title">
+        <h2 id="pr-missed-title">次に練習する型</h2>
         <div id="pr-missed"></div>
+        <button type="button" class="link" id="pr-missed-more" hidden></button>
       </section>
+      <details class="pane pr-section pr-levels">
+        <summary>レベルごとの正答</summary>
+        <div class="level-rows" id="pr-levels"></div>
+        <p class="hint">棒の長さは、そのレベルの問題に正解できると推定される割合です。右の数字は実際の正答数です。</p>
+      </details>
       <div class="placement-actions">
-        <button type="button" id="placement-again" class="primary">もう一度診断する</button>
-        <button type="button" id="placement-review">間違えた型を復習する</button>
+        <button type="button" id="placement-review" class="primary">苦手な型から練習する</button>
+        <button type="button" id="placement-home">ほかの診断を受ける</button>
+        <button type="button" id="placement-again" class="link">もう一度診断する</button>
       </div>
     </section>
 

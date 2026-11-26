@@ -157,8 +157,9 @@ function showProblem(problem) {
   current = problem;
   // 単元は出すが、問題の型は解き方のヒントになるので答え合わせの後にだけ出す。
   // レベル診断では単元も出さない（結果を出すまで、何を測っているかを意識させない）
-  $("unit-tag").textContent = current.unit_name;
-  $("unit-tag").hidden = mode === "placement";
+  // 診断中は単元名を出さず（解き方のヒントになるため）、何問目かだけを出す
+  $("unit-tag").textContent = mode === "placement" ? `問題 ${current.index}` : current.unit_name;
+  $("unit-tag").classList.toggle("plain", mode === "placement");
   setMathText($("prompt"), current.prompt);
   setLatex($("problem"), current.latex);
   $("problem").hidden = !current.latex; // 文章題で式がないときは問題文だけを出す
@@ -174,6 +175,7 @@ function showProblem(problem) {
   $("placement-skip").hidden = mode !== "placement";
   $("placement-skip").disabled = false;
   $("next").textContent = "次の問題へ進む";
+  $("submit").textContent = mode === "placement" ? "次へ" : "答え合わせ";
   resetNote();
   activeField = null;
   $("submit").disabled = false;
@@ -222,7 +224,7 @@ let placement = null;
 
 function showPlacementIntro() {
   $("placement-intro").hidden = false;
-  $("placement-progress").hidden = true;
+  hideTestbar();
   $("problem-card").hidden = true;
   $("result").hidden = true;
   $("placement-result").hidden = true;
@@ -232,9 +234,7 @@ function showPlacementIntro() {
 
 function showPlacementProgress() {
   // 途中の推定レベルや正誤は、結果を出すまで見せない
-  $("placement-count").textContent = `${placement.answered + 1} / ${placement.total} 問目`;
-  $("placement-bar").style.width = `${(placement.answered / placement.total) * 100}%`;
-  $("placement-progress").hidden = false;
+  showTestbar(placement.answered + 1, placement.total, "math");
 }
 
 async function startPlacement() {
@@ -253,7 +253,7 @@ async function startPlacement() {
     return;
   }
   $("placement-error").hidden = true;
-  placement = { session_id: r.session_id, total: r.total, answered: 0, next: r.problem, result: null };
+  placement = { session_id: r.session_id, total: r.total, answered: 0, next: r.problem, result: null, startedAt: Date.now() };
   $("placement-intro").hidden = true;
   nextPlacementStep();
 }
@@ -294,16 +294,121 @@ async function submitPlacement({ answer = "", skip = false }) {
   placement.answered = r.index;
   placement.next = r.next;
   placement.result = r.result;
+  if (r.result) {
+    placement.finishedAt = Date.now();
+    saveLast("placement", { label: r.result.label, level: r.result.level });
+  }
   refreshDueBadge();
   // 正誤・正しい答えは出さずに、そのまま次の問題（20問目のあとは結果）へ進む
   nextPlacementStep();
 }
 
+// 段の下に出す短い名前（中学1年 → 中1、数I（数と式） → I など）
+const shortLevel = (name) => name.replace(/^中学(\d)年$/, "中$1").replace(/（.*$/, "").replace(/^数/, "").replace("入口", "");
+
 function showPlacementResult(res) {
+  hideTestbar();
   $("drill").hidden = true;
   $("placement-result").hidden = false;
   $("pr-label").textContent = res.label;
-  $("pr-theta").textContent = `推定レベル ${res.theta.toFixed(1)}（±${res.se.toFixed(1)}）・正解 ${res.correct} / ${res.answered} 問`;
+
+  // 到達レベルの階段。到達した段まで塗り、次の段を点線にし、推定の幅を薄い帯で重ねる
+  const levels = res.by_level;
+  const n = levels.length;
+  const lo = levels[0].level;
+  const stairs = $("pr-stairs");
+  stairs.innerHTML = "";
+  stairs.style.setProperty("--n", n);
+  // θ を横位置（%）に。到達レベルは θ の切り捨てなので、レベル L の段が θ = L〜L+1 を受け持つ
+  const pos = (t) => Math.min(Math.max((t - lo) / n, 0), 1) * 100;
+  const band = el("span", "stairs-band");
+  band.style.left = `${pos(res.theta - res.se)}%`;
+  band.style.width = `${pos(res.theta + res.se) - pos(res.theta - res.se)}%`;
+  stairs.appendChild(band);
+  const labels = $("pr-stairs-labels");
+  labels.innerHTML = "";
+  labels.style.setProperty("--n", n);
+  levels.forEach((b, i) => {
+    const step = el("span", "step");
+    step.style.height = `${18 + (i * 82) / (n - 1)}%`;
+    if (b.level < res.level) step.classList.add("done");
+    if (b.level === res.level) {
+      step.classList.add("here");
+      step.appendChild(el("span", "you", "あなた"));
+    }
+    if (b.level === res.level + 1) step.classList.add("next");
+    stairs.appendChild(step);
+    const label = el("span", b.level === res.level ? "here" : "", shortLevel(b.name));
+    labels.appendChild(label);
+  });
+  const next = levels.find((b) => b.level === res.level + 1);
+  stairs.setAttribute(
+    "aria-label",
+    `${levels[0].name}から${levels[n - 1].name}までの${n}段のうち、${res.level >= lo ? `${res.level - lo + 1}段目` : "1段目より下"}`,
+  );
+  $("pr-stairs-note").textContent = next
+    ? `薄い帯は推定の幅です。点線の段（${next.name}）が次の目標です。`
+    : "薄い帯は推定の幅です。";
+
+  $("pr-correct").innerHTML = `${res.correct}<small> / ${res.answered}</small>`;
+  $("pr-theta").innerHTML = `${res.theta.toFixed(1)}<small> ±${res.se.toFixed(1)}</small>`;
+  const minutes = placement?.finishedAt ? Math.max(1, Math.round((placement.finishedAt - placement.startedAt) / 60000)) : null;
+  $("pr-time").innerHTML = minutes ? `${minutes}<small> 分</small>` : "–";
+
+  // 単元ごとの手ごたえ。色だけでなく記号でも区別する
+  const units = $("pr-units");
+  units.innerHTML = "";
+  for (const u of res.by_unit) {
+    const state = u.correct === u.attempts ? ["good", "◎", "できている"] : u.correct === 0 ? ["bad", "✕", "つまずいた"] : ["mid", "△", "あと少し"];
+    const chip = el("div", `unit-chip ${state[0]}`);
+    chip.append(el("span", "mark", state[1]), el("span", "", u.unit_name), el("span", "visually-hidden", `（${state[2]}・${u.correct}/${u.attempts}問）`));
+    units.appendChild(chip);
+  }
+  if (res.untested_units.length) {
+    const chip = el("div", "unit-chip none");
+    chip.append(el("span", "mark", "・"), el("span", "", res.untested_units.join("・")));
+    chip.appendChild(el("span", "visually-hidden", "（今回は出題なし）"));
+    units.appendChild(chip);
+  }
+
+  const mistakes = $("pr-mistakes");
+  mistakes.innerHTML = "";
+  for (const m of res.misconceptions) {
+    const item = el("div", "mistake");
+    const name = el("p", "mistake-name");
+    setMathText(name, m.label);
+    name.appendChild(el("span", "mistake-count", `${m.count}回`));
+    const detail = el("p", "mistake-detail");
+    setMathText(detail, m.explanation);
+    item.append(name, detail);
+    mistakes.appendChild(item);
+  }
+  if (res.unclassified_wrong) {
+    mistakes.appendChild(
+      el("p", "hint", `ほかに、よくある間違いのパターンに当てはまらない誤答・「わからない」が ${res.unclassified_wrong} 問ありました。`),
+    );
+  }
+  $("pr-mistakes-box").hidden = !res.misconceptions.length && !res.unclassified_wrong;
+
+  // 次に練習する型: 最初の3つだけ出し、残りは「すべて見る」で開く
+  const missed = $("pr-missed");
+  missed.innerHTML = "";
+  res.missed.forEach((m, i) => {
+    const go = el("button", "next-type");
+    go.type = "button";
+    go.hidden = i >= 3;
+    const body = el("span", "next-type-body");
+    body.append(el("span", "next-type-name", m.type_name), el("span", "next-type-meta", `${m.unit_name}・Lv${m.level}`));
+    go.appendChild(body);
+    go.insertAdjacentHTML("beforeend", '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>');
+    go.addEventListener("click", () => practiceType(m.unit_id, m.type_id));
+    missed.appendChild(go);
+  });
+  const more = $("pr-missed-more");
+  more.hidden = res.missed.length <= 3;
+  more.textContent = `間違えた型をすべて見る（${res.missed.length}件）`;
+  $("pr-missed-box").hidden = !res.missed.length;
+  $("placement-review").hidden = !res.missed.length;
 
   const rows = $("pr-levels");
   rows.innerHTML = "";
@@ -323,44 +428,75 @@ function showPlacementResult(res) {
     );
     rows.appendChild(row);
   }
-
-  const mistakes = $("pr-mistakes");
-  mistakes.innerHTML = "";
-  for (const m of res.misconceptions) {
-    const item = el("div", "weak-item");
-    const body = el("div", "weak-body");
-    const name = el("div", "weak-name");
-    setMathText(name, `${m.label}（${m.count}回）`);
-    const detail = el("div", "weak-detail");
-    setMathText(detail, m.explanation);
-    body.append(name, detail);
-    item.appendChild(body);
-    mistakes.appendChild(item);
-  }
-  if (res.unclassified_wrong) {
-    mistakes.appendChild(
-      el("p", "hint", `ほかに、よくある間違いのパターンに当てはまらない誤答・「わからない」が ${res.unclassified_wrong} 問ありました。`),
-    );
-  }
-  $("pr-mistakes-box").hidden = !res.misconceptions.length && !res.unclassified_wrong;
-
-  const missed = $("pr-missed");
-  missed.innerHTML = "";
-  for (const m of res.missed) {
-    const item = el("div", "weak-item");
-    const body = el("div", "weak-body");
-    const name = el("div", "weak-name", m.type_name);
-    name.appendChild(el("small", "", `／ ${m.unit_name}・Lv${m.level}`));
-    body.appendChild(name);
-    const go = el("button", "", "この型を練習する");
-    go.type = "button";
-    go.addEventListener("click", () => practiceType(m.unit_id, m.type_id));
-    item.append(body, go);
-    missed.appendChild(item);
-  }
-  $("pr-missed-box").hidden = !res.missed.length;
-  $("placement-review").hidden = !res.missed.length;
   window.scrollTo({ top: 0, behavior: reduceMotion() ? "auto" : "smooth" });
+}
+
+// --- 出題中の上の帯（集中モード） ---
+
+// subject は math・kanji・english（帯の色を変える）
+function showTestbar(index, total, subject) {
+  document.body.classList.add("focus");
+  const bar = $("testbar");
+  bar.hidden = false;
+  bar.dataset.subject = subject;
+  $("testbar-count").textContent = `${index} / ${total}`;
+  $("testbar-fill").style.width = `${((index - 1) / total) * 100}%`;
+  const track = $("testbar-track");
+  track.setAttribute("aria-valuemax", total);
+  track.setAttribute("aria-valuenow", index - 1);
+  track.setAttribute("aria-label", `${total}問中${index}問目`);
+}
+
+function hideTestbar() {
+  document.body.classList.remove("focus");
+  $("testbar").hidden = true;
+}
+window.showTestbar = showTestbar;
+window.hideTestbar = hideTestbar;
+
+// --- トップの「前回の結果」（このブラウザにだけ残す） ---
+
+function saveLast(test, data) {
+  try {
+    localStorage.setItem(`last:${test}`, JSON.stringify({ ...data, at: new Date().toISOString() }));
+  } catch {}
+}
+window.saveLast = saveLast;
+
+function loadLast(test) {
+  try {
+    return JSON.parse(localStorage.getItem(`last:${test}`));
+  } catch {
+    return null;
+  }
+}
+
+const formatDate = (iso) => {
+  const d = new Date(iso);
+  return `${d.getMonth() + 1}月${d.getDate()}日`;
+};
+
+function showHome() {
+  for (const test of ["placement", "kanji", "english"]) {
+    const box = $(`last-${test}`);
+    const last = loadLast(test);
+    const inProgress =
+      test === "placement"
+        ? placement && !placement.result && `${placement.answered + 1} / ${placement.total} 問目`
+        : window.vocabInProgress?.(test);
+    box.hidden = !last && !inProgress;
+    box.textContent = "";
+    if (inProgress) {
+      box.append(el("span", "", "途中から再開できます"), el("span", "test-last-value", inProgress));
+    } else if (last) {
+      box.append(el("span", "", `前回 ${formatDate(last.at)}`), el("span", "test-last-value", last.label));
+    }
+  }
+  // 数学の階段は、前回の到達レベルまで塗る（受けていなければ全体を薄く）
+  const last = loadLast("placement");
+  [...$("home-ladder").children].forEach((step, i) => {
+    step.className = last ? (i + 1 <= last.level ? "on" : i + 1 === last.level + 1 ? "next" : "") : "on";
+  });
 }
 
 const ICON_CHECK = '<svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>';
@@ -419,6 +555,8 @@ function showDueBadge(rows) {
   const n = rows.filter(isDue).length;
   $("due-badge").textContent = n;
   $("due-badge").hidden = n === 0;
+  $("home-due-badge").textContent = n;
+  $("home-due-badge").hidden = n === 0;
   $("due-badge-label").textContent = n ? `（期限の来た型 ${n}）` : "";
   $("menu-dot").hidden = n === 0;
 }
@@ -536,11 +674,15 @@ function switchTab(tab) {
   // ページの URL に #practice などを付け、再読み込みやブックマークで同じページを開けるようにする
   history.replaceState(null, "", tab === "home" ? location.pathname : `#${tab}`);
   $("home-page").hidden = tab !== "home";
+  hideTestbar();
   $("drill").hidden = tab === "home" || tab === "stats" || tab in VOCAB_TABS;
   $("stats").hidden = tab !== "stats";
   $("vocab").hidden = !(tab in VOCAB_TABS);
   $("placement-result").hidden = true;
-  if (tab === "home") return;
+  if (tab === "home") {
+    showHome();
+    return;
+  }
   if (tab === "stats") {
     loadStats();
     return;
@@ -552,7 +694,6 @@ function switchTab(tab) {
   mode = tab;
   $("toolbar").hidden = tab === "placement";
   $("placement-intro").hidden = true;
-  $("placement-progress").hidden = true;
   $("type-label").hidden = tab !== "practice";
   $("review-hint").hidden = tab !== "review";
   if (tab === "placement") {
@@ -861,7 +1002,15 @@ window.addEventListener("DOMContentLoaded", async () => {
     placement = null;
     showPlacementIntro();
   });
-  $("placement-review").addEventListener("click", () => switchTab("review"));
+  // 苦手な型から練習する: 結果の「次に練習する型」の先頭（最もレベルの低い、間違えた型）を開く
+  $("placement-review").addEventListener("click", () => $("pr-missed").querySelector(".next-type")?.click());
+  $("placement-home").addEventListener("click", () => switchTab("home"));
+  $("pr-missed-more").addEventListener("click", () => {
+    $("pr-missed").querySelectorAll(".next-type").forEach((b) => (b.hidden = false));
+    $("pr-missed-more").hidden = true;
+  });
+  // 中断してもテストの途中の状態は残るので、トップのカードから続きを再開できる
+  $("testbar-quit").addEventListener("click", () => switchTab("home"));
   $("start-review").addEventListener("click", () => switchTab("review"));
   $("stats-retry").addEventListener("click", loadStats);
   $("toggle-input").addEventListener("click", toggleInput);
