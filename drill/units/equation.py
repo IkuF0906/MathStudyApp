@@ -277,6 +277,6 @@ TYPES = [
     ProblemType("eq_system", "equation", "連立方程式", r"加減法・代入法", _build_system, level=2),
     ProblemType("eq_quadratic_factor", "equation", "2次方程式（因数分解・平方根）", r"$(x - a)(x - b) = 0$、$x^2 = m$", _build_quadratic_factor, level=3, form="radical"),
     ProblemType("eq_quadratic_formula", "equation", "2次方程式（解の公式）", r"$x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}$", _build_quadratic_formula, level=3, form="radical"),
-    ProblemType("eq_discriminant", "equation", "判別式と重解", r"$D = b^2 - 4ac = 0$", _build_discriminant, level=4),
+    ProblemType("eq_discriminant", "equation", "判別式と重解", r"$D = b^2 - 4ac = 0$", _build_discriminant, level=5),  # 数I「二次関数」（グラフと x 軸の共有点）
     ProblemType("eq_abs", "equation", "絶対値を含む方程式", r"$|x - a| = b$", _build_abs, level=4),
 ]

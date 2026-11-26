@@ -337,6 +337,6 @@ TYPES = [
     ProblemType("prob_complement", "probability", "余事象（少なくとも 1 回）", r"$1 - (1-p)^n$", _build_complement, level=6),
     ProblemType("prob_binomial", "probability", "反復試行", r"${}_n\mathrm{C}_k\,p^k(1-p)^{n-k}$", _build_binomial, level=6),
     ProblemType("prob_draw", "probability", "玉を戻さずに取り出す", r"2 回目は残りの玉で考える", _build_draw, level=6),
-    ProblemType("prob_conditional", "probability", "条件付き確率", r"$P_B(A) = \frac{P(A \cap B)}{P(B)}$", _build_conditional, level=7),
-    ProblemType("prob_expectation", "probability", "期待値", r"$E = \sum x_i p_i$", _build_expectation, level=7),
+    ProblemType("prob_conditional", "probability", "条件付き確率", r"$P_B(A) = \frac{P(A \cap B)}{P(B)}$", _build_conditional, level=6),  # 数A（2018年告示）
+    ProblemType("prob_expectation", "probability", "期待値", r"$E = \sum x_i p_i$", _build_expectation, level=6),  # 数A（2018年告示で数Bから移行）
 ]
